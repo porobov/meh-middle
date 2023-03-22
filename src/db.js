@@ -4,6 +4,7 @@ class DB {
 
     constructor(url) {
         this.client = new MongoClient(url)
+        this.tempStateId = "two"
     }
 
     async connect(dbName) {
@@ -12,28 +13,34 @@ class DB {
         console.log("Connected correctly to server")
         this.db = this.client.db(dbName)
         this.col = this.db.collection("people")
+        this.state = this.db.collection("state")
     }
     
     async close() {
         await this.client.close()
     }
 
-    async saveLatestBlockForEvent(eventName, latestBlock) {
-        let personDocument = {
-            "name": { "first": "Alan", "last": "Turing" },
-            "birth": new Date(1912, 5, 23), // May 23, 1912                                                                                                                                 
-            "death": new Date(1954, 5, 7),  // May 7, 1954                                                                                                                                  
-            "contribs": ["Turing machine", "Turing test", "Turingery"],
-            "views": 1250000
+    // creating empty one for the first db setup
+    async createEmptyStateRecord() {
+        await this.state.createIndex( { "state_id": 1 }, { unique: true } )
+        let emptyStateRecord = {
+            "state_id": this.tempStateId,
+            "latestNewImageEventBlock": 1250000
         }
         // Insert a single document, wait for promise so we can read it back
-        const p = await this.col.insertOne(personDocument)
+        const p = await this.state.insertOne(emptyStateRecord)
+    }
+
+    async saveLatestBlockForEvent(eventName, latestBlock) {
+        var myquery = { state_id: this.tempStateId };
+        var newvalues = { $set: { latestNewImageEventBlock: latestBlock} };
+        this.state.updateOne(myquery, newvalues)
     }
 
     async getLatestBlockForEvent(eventName) {
-        const myDoc = await this.col.findOne()
-        // Print to the console
-        console.log(myDoc)
+        var myquery = { state_id: this.tempStateId };
+        const stateRecord = await this.state.findOne(myquery)
+        console.log(stateRecord)
     }
 
     tryCatch = async (tryer) => {

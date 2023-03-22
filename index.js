@@ -12,6 +12,7 @@ async function main() {
     let eventName = "NewImage"
     let latestBlock = 1000000
     await db.connect(dbName) 
+    // await db.createEmptyStateRecord()
     await db.saveLatestBlockForEvent(eventName, latestBlock)
     await db.getLatestBlockForEvent(eventName)
     await db.close()

@@ -3,6 +3,9 @@ require("dotenv").config();
 
 /** @type import('hardhat/config').HardhatUserConfig */
 module.exports = {
+  stateRecordName: "two",
+  dbAccessUrl: "mongodb+srv://upala-express:1l42hOuMYBVAjfte@cluster0.xix8e.mongodb.net/test?retryWrites=true&w=majority&useNewUrlParser=true&useUnifiedTopology=true",
+  dbName: "test",
   solidity: "0.8.18",
 	defaultNetwork: "localhost",
   networks: {
