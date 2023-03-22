@@ -1,59 +1,27 @@
-const { MyContract } = require("./src/chain.js")
-var mongo = require('mongodb')
-const { MongoClient } = require("mongodb");
+const { MillionEther } = require("./src/chain.js")
+const { DB } = require("./src/db.js")
 
 const url = "mongodb+srv://upala-express:1l42hOuMYBVAjfte@cluster0.xix8e.mongodb.net/test?retryWrites=true&w=majority&useNewUrlParser=true&useUnifiedTopology=true";
-const client = new MongoClient(url);
+let db = new DB(url)
 const dbName = "test"
-
 /*
-let db = new DB(credentials)
 let renderer = new Renderer()
 let downloader = new WWWj
-
-lastDbBlock = db.getLastBlock()
 */
 async function main() {
-
-  try {
-    await client.connect();
-    console.log("Connected correctly to server");
-    const db = client.db(dbName);
-
-    // Use the collection "people"
-    const col = db.collection("people");
-
-    // Construct a document                                                                                                                                                              
-    let personDocument = {
-      "name": { "first": "Alan", "last": "Turing" },
-      "birth": new Date(1912, 5, 23), // May 23, 1912                                                                                                                                 
-      "death": new Date(1954, 5, 7),  // May 7, 1954                                                                                                                                  
-      "contribs": ["Turing machine", "Turing test", "Turingery"],
-      "views": 1250000
-    }
-
-    // Insert a single document, wait for promise so we can read it back
-    const p = await col.insertOne(personDocument);
-    // Find one document
-    const myDoc = await col.findOne();
-    // Print to the console
-    console.log(myDoc);
-
-  } catch (err) {
-    console.log(err.stack);
-  }
-
-  finally {
-    await client.close();
-  }
+    let eventName = "NewImage"
+    let latestBlock = 1000000
+    await db.connect(dbName) 
+    await db.saveLatestBlockForEvent(eventName, latestBlock)
+    await db.getLatestBlockForEvent(eventName)
+    await db.close()
 }
 /*
-let eventName = "NewImage"
 let firstBlock = 0
 let contractName = "MillionEther"
 let contractAddress = "0x15dbdB25f870f21eaf9105e68e249E0426DaE916"
 
-let contract = new MyContract(contractName, contractAddress)
+let contract = new MillionEther(contractName, contractAddress)
 let newEvents = await contract.getEvents(eventName, firstBlock)
 console.log(newEvents)
 /*

@@ -1,6 +1,6 @@
 const { ethers } = require("hardhat")
 
-class MyContract {
+class MillionEther {
   constructor(contractName, contractAddress){
     this.contractAddress = contractAddress
     this.contractName = contractName
@@ -15,5 +15,5 @@ class MyContract {
 }
 
 module.exports = {
-  MyContract
+  MillionEther
 }
