@@ -1,9 +1,8 @@
 const { MillionEther } = require("./src/chain.js")
 const { DB } = require("./src/db.js")
+const hre = require("hardhat");
 
-const url = "mongodb+srv://upala-express:1l42hOuMYBVAjfte@cluster0.xix8e.mongodb.net/test?retryWrites=true&w=majority&useNewUrlParser=true&useUnifiedTopology=true";
-let db = new DB(url)
-const dbName = "test"
+let db = new DB(hre.config.dbConf)
 /*
 let renderer = new Renderer()
 let downloader = new WWWj
@@ -11,8 +10,7 @@ let downloader = new WWWj
 async function main() {
     let eventName = "NewImage"
     let latestBlock = 1000000
-    await db.connect(dbName) 
-    // await db.createEmptyStateRecord()
+    await db.connect() 
     await db.saveLatestBlockForEvent(eventName, latestBlock)
     await db.getLatestBlockForEvent(eventName)
     await db.close()

@@ -1,9 +1,9 @@
 const { DB } = require("../src/db.js")
 const hre = require("hardhat");
-let db = new DB(hre.config.dbAccessUrl)
+let db = new DB(hre.config.dbConf)
 
 async function main() {
-    await db.connect(hre.config.dbName) 
+    await db.connect() 
     await db.createEmptyStateRecord()
     await db.close()
 }
