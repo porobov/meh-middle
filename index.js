@@ -8,28 +8,32 @@ let renderer = new Renderer()
 let downloader = new WWWj
 */
 async function main() {
+    // await db.connect()
     let eventName = "NewImage"
+    // await db.getLatestBlockForEvent(eventName)
+    let fromBlock = 0
+
+    let contractName = "MillionEther"
+    let contractAddress = "0x15dbdB25f870f21eaf9105e68e249E0426DaE916"
+    let contract = new MillionEther(contractName, contractAddress)
+
+    let newEvents = await contract.getEvents(eventName, fromBlock)
+
+    console.log(newEvents)
+
+    if (newEvents) {
+        db.addEvents(newEvents.decodedEvents)
+    }
+    // db.saveBlockNumber(newEvents.blockNumber)
+
     let latestBlock = 1000000
-    await db.connect() 
     await db.saveLatestBlockForEvent(eventName, latestBlock)
-    await db.getLatestBlockForEvent(eventName)
+
     await db.close()
 }
 /*
-let firstBlock = 0
-let contractName = "MillionEther"
-let contractAddress = "0x15dbdB25f870f21eaf9105e68e249E0426DaE916"
-
-let contract = new MillionEther(contractName, contractAddress)
-let newEvents = await contract.getEvents(eventName, firstBlock)
-console.log(newEvents)
-/*
 // checking if any events are present (both ads and buyBlock)
 // and saving them to db
-if (newEvents) {
-    db.addEvents(newEvents.decodedEvents)
-}
-db.saveBlockNumber(newEvents.blockNumber)
 
 // download images and save to db
 adsNoImages = db.getAdsNoImages()

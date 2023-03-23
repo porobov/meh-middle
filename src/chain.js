@@ -7,10 +7,28 @@ class MillionEther {
   }
 
   async getEvents(eventName, fromBlock) {
+    const latestBlock = (await ethers.provider.getBlock("latest")).number
+    console.log(latestBlock)
     let contract = await ethers.getContractAt(this.contractName, this.contractAddress) 
     const eventFilter = contract.filters[eventName]()
-    const events = await contract.queryFilter(eventFilter, fromBlock, 'latest')
-    return events.map(ev => ev.args)  
+    const events = await contract.queryFilter(eventFilter, fromBlock, latestBlock)
+    // if event name is NewImage
+    const strippedEvents = events.map(ev => {
+      return {
+        ID: ev.args.ID.toNumber(),
+        fromX: ev.args.fromX,
+        fromY: ev.args.fromY,
+        toX: ev.args.toX,
+        toY: ev.args.toY,
+        adText: ev.args.adText,
+        adUrl: ev.args.adUrl,
+        imageSourceUrl: ev.args.imageSourceUrl
+      }
+    })
+    return {
+      events: strippedEvents,
+      latestBlock: latestBlock
+    }
   }
 }
 
