@@ -14,6 +14,7 @@ class DB {
         this.db = this.client.db(this.conf.dbName)
         this.col = this.db.collection("people")
         this.state = this.db.collection("state")
+        this.ads = this.db.collection("ads")
         this.tempStateId = this.conf.stateRecordName
     }
     
@@ -30,13 +31,13 @@ class DB {
             "state_id": this.tempStateId,
             "latestNewImageEventBlock": 1250000
         }
-        // Insert a single document, wait for promise so we can read it back
         const p = await this.state.insertOne(emptyStateRecord)
     }
 
     async recordNameForEvent(eventName) {
         return "latestBlockFor" + eventName
     }
+
     async saveLatestBlockForEvent(eventName, latestBlock) {
         var myquery = { state_id: this.tempStateId };
         var newvalues = { $set: { [this.recordNameForEvent(eventName)]: latestBlock} };
@@ -47,6 +48,27 @@ class DB {
         var myquery = { state_id: this.tempStateId };
         const stateRecord = await this.state.findOne(myquery)
         console.log(stateRecord[this.recordNameForEvent(eventName)])
+    }
+
+    // Saving events
+
+    async createEmptyEventsCollection(eventName) {
+        // TODO delete if exists
+        await this.ads.createIndex( { "ID": 1 }, { unique: true } )
+    }
+
+    async addAds(decodedEvents) {
+        try {
+            const result = await this.ads.insertMany(decodedEvents, { ordered: false })
+            return result
+          } catch (error) {
+            if (error.code === 11000) {
+              console.log('Duplicate key error');
+            } else {
+              console.log(error);
+            }
+            return 0
+          }   
     }
 
     tryCatch = async (tryer) => {

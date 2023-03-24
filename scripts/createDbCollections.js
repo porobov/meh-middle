@@ -4,7 +4,9 @@ let db = new DB(hre.config.dbConf)
 
 async function main() {
     await db.connect() 
-    await db.createEmptyStateRecord()
+    /// await db.createEmptyStateRecord()
+    const eventName = "NewImage"
+    await db.createEmptyEventsCollection(eventName)
     await db.close()
 }
 main()

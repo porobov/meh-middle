@@ -8,7 +8,7 @@ let renderer = new Renderer()
 let downloader = new WWWj
 */
 async function main() {
-    // await db.connect()
+    await db.connect()
     let eventName = "NewImage"
     // await db.getLatestBlockForEvent(eventName)
     let fromBlock = 0
@@ -19,17 +19,15 @@ async function main() {
 
     let newEvents = await contract.getEvents(eventName, fromBlock)
 
-    console.log(newEvents)
-
     if (newEvents) {
-        db.addEvents(newEvents.decodedEvents)
+        const insertResults = await db.addAds(newEvents.decodedEvents)
+        console.log(`${insertResults.insertedCount} documents were inserted`)
     }
-    // db.saveBlockNumber(newEvents.blockNumber)
-
-    let latestBlock = 1000000
-    await db.saveLatestBlockForEvent(eventName, latestBlock)
-
     await db.close()
+    // await db.connect()
+    // await db.saveLatestBlockForEvent(eventName, newEvents.blockNumber)
+
+    // await db.close()
 }
 /*
 // checking if any events are present (both ads and buyBlock)

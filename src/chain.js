@@ -26,8 +26,8 @@ class MillionEther {
       }
     })
     return {
-      events: strippedEvents,
-      latestBlock: latestBlock
+      decodedEvents: strippedEvents,
+      blockNumber: latestBlock
     }
   }
 }
