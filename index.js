@@ -8,28 +8,35 @@ let renderer = new Renderer()
 let downloader = new WWW
 */
 async function main() {
+
+    // get latest block
     await db.connect()
     let eventName = "NewImage"
-    // await db.getLatestBlockForEvent(eventName)
-    let fromBlock = 0
-
+    let fromBlock = await db.getLatestBlockForEvent(eventName)
+    await db.close()
+    console.log(`${eventName} event latest block in DB is ${fromBlock}`)
+    
+    // get events
     let contractName = "MillionEther"
     let contractAddress = "0x15dbdB25f870f21eaf9105e68e249E0426DaE916"
     let contract = new MillionEther(contractName, contractAddress)
-
+    console.log(`Checking ${eventName} event starting from block ${fromBlock}`)
     let newEvents = await contract.getEvents(eventName, fromBlock)
+    console.log(`Got ${newEvents.decodedEvents.length} new events till block ${newEvents.blockNumber}`)
 
-    if (newEvents) {
+    // save new events to db
+    await db.connect()
+    if (newEvents.decodedEvents.length > 0) {
         const insertResults = await db.addAds(newEvents.decodedEvents)
-        console.log(`${insertResults.insertedCount} documents were inserted`)
+        console.log(`${insertResults.insertedCount} events were inserted`)
     }
 
+    // save block numer for event    
     await db.saveLatestBlockForEvent(eventName, newEvents.blockNumber)
+    console.log(`Saved new latest block to db`)
     await db.close()
 }
 /*
-// checking if any events are present (both ads and buyBlock)
-// and saving them to db
 
 // download images and save to db
 adsNoImages = db.getAdsNoImages()

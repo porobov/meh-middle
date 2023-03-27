@@ -8,9 +8,8 @@ class DB {
     }
 
     async connect(dbName) {
-        const [res, err] = await this.tryCatch(() => this.client.connect())
-        console.log("error:", err)
-        console.log("Connected correctly to server")
+        const [res, err] = await this.tryCatch(async () => await this.client.connect())
+        console.log("error:", err)  // TODO manage errors correctly
         this.db = this.client.db(this.conf.dbName)
         this.col = this.db.collection("people")
         this.state = this.db.collection("state")
@@ -47,7 +46,7 @@ class DB {
     async getLatestBlockForEvent(eventName) {
         var myquery = { state_id: this.tempStateId };
         const stateRecord = await this.state.findOne(myquery)
-        console.log(stateRecord[this.recordNameForEvent(eventName)])
+        return stateRecord[this.recordNameForEvent(eventName)]
     }
 
     // Saving events
@@ -57,6 +56,7 @@ class DB {
         await this.ads.createIndex( { "ID": 1 }, { unique: true } )
     }
 
+    // TODO manage errors correctly
     async addAds(decodedEvents) {
         try {
             const result = await this.ads.insertMany(decodedEvents, { ordered: false })

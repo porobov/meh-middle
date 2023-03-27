@@ -8,7 +8,6 @@ class MillionEther {
 
   async getEvents(eventName, fromBlock) {
     const latestBlock = (await ethers.provider.getBlock("latest")).number
-    console.log(latestBlock)
     let contract = await ethers.getContractAt(this.contractName, this.contractAddress) 
     const eventFilter = contract.filters[eventName]()
     const events = await contract.queryFilter(eventFilter, fromBlock, latestBlock)
