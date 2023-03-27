@@ -9,7 +9,7 @@ class DB {
 
     async connect(dbName) {
         const [res, err] = await this.tryCatch(() => this.client.connect())
-        console.log(err)
+        console.log("error:", err)
         console.log("Connected correctly to server")
         this.db = this.client.db(this.conf.dbName)
         this.col = this.db.collection("people")
@@ -41,7 +41,7 @@ class DB {
     async saveLatestBlockForEvent(eventName, latestBlock) {
         var myquery = { state_id: this.tempStateId };
         var newvalues = { $set: { [this.recordNameForEvent(eventName)]: latestBlock} };
-        this.state.updateOne(myquery, newvalues)
+        await this.state.updateOne(myquery, newvalues)
     }
 
     async getLatestBlockForEvent(eventName) {

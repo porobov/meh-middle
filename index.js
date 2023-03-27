@@ -5,7 +5,7 @@ const hre = require("hardhat");
 let db = new DB(hre.config.dbConf)
 /*
 let renderer = new Renderer()
-let downloader = new WWWj
+let downloader = new WWW
 */
 async function main() {
     await db.connect()
@@ -23,11 +23,9 @@ async function main() {
         const insertResults = await db.addAds(newEvents.decodedEvents)
         console.log(`${insertResults.insertedCount} documents were inserted`)
     }
-    await db.close()
-    // await db.connect()
-    // await db.saveLatestBlockForEvent(eventName, newEvents.blockNumber)
 
-    // await db.close()
+    await db.saveLatestBlockForEvent(eventName, newEvents.blockNumber)
+    await db.close()
 }
 /*
 // checking if any events are present (both ads and buyBlock)
