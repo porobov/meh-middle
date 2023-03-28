@@ -1,4 +1,5 @@
 const { MongoClient } = require("mongodb")
+IMAGES_BATCH_SIZE = 10
 
 class DB {
 
@@ -70,7 +71,13 @@ class DB {
             return 0
           }   
     }
-
+    async getAdsNoImages() {
+      // TODO add images that failed to download
+      var myquery = { imageThumb: null };
+      let cursor = this.ads.find(myquery, { ID: 1, adUrl: 1 }).limit(IMAGES_BATCH_SIZE)
+      return await cursor.toArray()
+    }
+    // Allowed error codes ECONNREFUSED 
     tryCatch = async (tryer) => {
         try {
           const result = await tryer()

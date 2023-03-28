@@ -1,14 +1,14 @@
 const { MillionEther } = require("./src/chain.js")
 const { DB } = require("./src/db.js")
 const hre = require("hardhat");
-
+const { WebGateway } = require("./src/web.js")
 let db = new DB(hre.config.dbConf)
 /*
 let renderer = new Renderer()
 let downloader = new WWW
 */
 async function main() {
-
+/*
     // get latest block
     await db.connect()
     let eventName = "NewImage"
@@ -35,26 +35,37 @@ async function main() {
     await db.saveLatestBlockForEvent(eventName, newEvents.blockNumber)
     console.log(`Saved new latest block to db`)
     await db.close()
+
+    await db.connect()
+    let adsNoImages = await db.getAdsNoImages()
+    console.log(adsNoImages)
+    await db.close()
+    */
+    let wg = new WebGateway()
+    let imageSourceUrl = 'http://i.imgur.com/nU2IQqY.png'
+    let downloadResult = await wg.downloadImage(imageSourceUrl)
+    wg.saveImageBufferToDisk(downloadResult.binary, "1." + downloadResult.extension)
+    // download images and save to db
+    /*let adsGotChanges = false
+    for (ad in adsNoImages) {
+        // also try to download previously failed images (
+        console.log("image size:", getImageSize(ad.adUrl))
+        /*
+        ad.fullImage = downloader.download(ad.adUrl)
+        // do not download files more than 10 Mb
+        if (successfullyDownloaded && isCorrectFormat) {
+            gotChanges = true
+        }
+        let width = modulo(ad.toX - ad.fromX) // TODO see old middle using modulo, because contract allows mixing coords
+        let height = modulo(ad.toY - ad.fromY)
+        ad.resizedImage = renderer.resizeImage(ad.fullImage, width, height)
+        ad.fullImage = ""
+        db.saveAd(ad)
+    }*/
+
 }
+
 /*
-
-// download images and save to db
-adsNoImages = db.getAdsNoImages()
-let adsGotChanges = false
-for (ad in adsNoImages) {
-    // try to download previously failed images (
-    ad.fullImage = downloader.download(ad.imageUrl)
-    if (successfullyDownloaded) {
-        gotChanges = true
-    }
-    let width = modulo(ad.toX - ad.fromX) // TODO see old middle using modulo, because contract allows mixing coords
-    let height = modulo(ad.toY - ad.fromY)
-    ad.resizedImage = renderer.resizeImage(ad.fullImage, width, height)
-    ad.fullImage = ""
-    db.saveAd(ad)
-}
-
-
 
 // construct adsBigBic
 // if no image is present will fill with black and add error to block data
