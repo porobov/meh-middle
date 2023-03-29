@@ -3,6 +3,7 @@ const { DB } = require("./src/db.js")
 const hre = require("hardhat");
 const { WebGateway } = require("./src/web.js")
 let db = new DB(hre.config.dbConf)
+NEXT_RETRY_DELAY = 1000 * 60 * 5 // 5 minutes
 /*
 let renderer = new Renderer()
 let downloader = new WWW
@@ -36,23 +37,48 @@ async function main() {
     console.log(`Saved new latest block to db`)
     await db.close()
 
-    await db.connect()
-    let adsNoImages = await db.getAdsNoImages()
-    console.log(adsNoImages)
-    await db.close()
     */
+    await db.connect()
+    let ads = await db.getAdsNoImages()
+    console.log("ads from db count", ads.length)
+    await db.close()
+
     let wg = new WebGateway()
-    let imageSourceUrl = 'http://i.imgur.com/nU2IQqY.png'
-    let downloadResult = await wg.downloadImage(imageSourceUrl)
-    wg.saveImageBufferToDisk(downloadResult.binary, "1." + downloadResult.extension)
     // download images and save to db
-    /*let adsGotChanges = false
-    for (ad in adsNoImages) {
-        // also try to download previously failed images (
-        console.log("image size:", getImageSize(ad.adUrl))
-        /*
-        ad.fullImage = downloader.download(ad.adUrl)
+    let adsGotChanges = false
+    for (ad of ads) {
+        let [ downloadResult, error ] = await wg.downloadImage(ad.imageSourceUrl)
+        if (downloadResult) { 
+            // full image binary is a temporary value. It shouldn't be save to db
+            ad.fullImageBinary = downloadResult.binary
+            ad.imageExtension = downloadResult.extension
+        } else {
+            if (Object.hasOwn(error, 'response') 
+                && Object.hasOwn(error.response, 'status')
+                && (
+                    (error.response.status == 408)
+                    || (error.response.status == 502)
+                    || (error.response.status == 503)
+                    || (error.response.status == 504)
+                    || (error.response.status == 429)
+                    )
+            ) {
+                // try later for these errors 
+                if(Object.hasOwn(ad, "numOfTries") && ad.numOfTries >= 0) {
+                    ad.numOfTries ++
+                } else {
+                    ad.numOfTries = 1
+                }
+                ad.nextRetryTimestamp = Date.now() + NEXT_RETRY_DELAY * 2 ** ad.numOfTries
+            } else {
+                // stop downloading attempts if received this flag
+                ad.failedToDownLoad = true
+            }
+        }
+
+        // console.log(downloadResult.extension)
         // do not download files more than 10 Mb
+        /*
         if (successfullyDownloaded && isCorrectFormat) {
             gotChanges = true
         }
@@ -60,9 +86,10 @@ async function main() {
         let height = modulo(ad.toY - ad.fromY)
         ad.resizedImage = renderer.resizeImage(ad.fullImage, width, height)
         ad.fullImage = ""
-        db.saveAd(ad)
-    }*/
-
+    
+    */
+    }
+    // db.appendImagesToAds(ads)
 }
 
 /*

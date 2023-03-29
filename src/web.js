@@ -9,13 +9,26 @@ class WebGateway {
   }
   
   async downloadImage(imageUrl) {
-    const response = await axios.get(imageUrl, { responseType: 'arraybuffer' });
-    const buffer = Buffer.from(response.data, 'binary');
-    // const chunk = await readChunk('unicorn.png', {length: minimumBytes});
-    const imageFormat = await (await import("image-type")).default(buffer)
-    return {
-      binary: buffer,
-      extension: imageFormat.ext
+    let response = null
+    try {
+      response = await axios.get(imageUrl, { responseType: 'arraybuffer' });
+    } catch (e){
+      return [null, e]
+    }
+
+    try {
+      const buffer = Buffer.from(response.data, 'binary');
+      const imageFormat = await (await import("image-type")).default(buffer)
+        return [
+          {
+            binary: buffer,
+            extension: imageFormat.ext
+          },
+          null
+        ]
+      }
+    catch (e) {
+      return [null, e]
     }
   }
 

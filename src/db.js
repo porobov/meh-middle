@@ -1,5 +1,6 @@
 const { MongoClient } = require("mongodb")
 IMAGES_BATCH_SIZE = 10
+MAX_NUM_OF_DOWNLOAD_ATTEMPTS = 5
 
 class DB {
 
@@ -71,11 +72,31 @@ class DB {
             return 0
           }   
     }
+
     async getAdsNoImages() {
-      // TODO add images that failed to download
-      var myquery = { imageThumb: null };
-      let cursor = this.ads.find(myquery, { ID: 1, adUrl: 1 }).limit(IMAGES_BATCH_SIZE)
+      // TODO exclude images that failed to download
+      // TODO add images that require a next try
+// numOfTries < MAX_NUM_OF_DOWNLOAD_ATTEMPTS
+// failedToDownLoad false
+      var myquery =  
+        {
+          $and: [
+            { $or:[
+              {numOfTries: {$lt:MAX_NUM_OF_DOWNLOAD_ATTEMPTS}},
+              {numOfTries: {$exists:false}}]}, 
+            { $or:[
+              {failedToDownLoad: false },
+              {failedToDownLoad: {$exists:false}}]}, 
+            { imageThumb: null }
+          ]
+        }
+      
+      let cursor = this.ads.find(myquery).limit(IMAGES_BATCH_SIZE)
       return await cursor.toArray()
+    }
+
+    async appendImagesToAds(ads) {
+      
     }
     // Allowed error codes ECONNREFUSED 
     tryCatch = async (tryer) => {
@@ -93,5 +114,5 @@ class DB {
 }
 
 module.exports = {
-  DB
+  DB,
 }
