@@ -13,6 +13,9 @@ class MillionEther {
     const events = await contract.queryFilter(eventFilter, fromBlock, latestBlock)
     // if event name is NewImage
     const strippedEvents = events.map(ev => {
+    // TODO make shure coordinates are correct. 
+    // let width = modulo(ad.toX - ad.fromX) // TODO see old middle using modulo, because contract allows mixing coords
+    // let height = modulo(ad.toY - ad.fromY)
       return {
         ID: ev.args.ID.toNumber(),
         fromX: ev.args.fromX,

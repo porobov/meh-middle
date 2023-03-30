@@ -6,10 +6,20 @@ let db = new DB(hre.config.dbConf)
 NEXT_RETRY_DELAY = 1000 * 60 * 5 // 5 minutes
 MAX_NUM_OF_DOWNLOAD_ATTEMPTS = 5
 STATUSCODES_ALLOWING_RETRY = [ 408, 502, 503, 504, 429 ]
+THUMBNAIL_PARAMS = {
+    width: 400,
+    height: 400
+}
 /*
 let renderer = new Renderer()
 let downloader = new WWW
 */
+function getDimensions(adRecord) {
+    return {
+        width: adRecord.toX - adRecord.fromX,
+        height: adRecord.toY - adRecord.fromY
+    }
+}
 async function main() {
 /*
     // get latest block
@@ -64,7 +74,7 @@ async function main() {
                 } else {
                     ad.numOfTries = 1
                 }
-                ad.nextRetryTimestamp = Date.now() + NEXT_RETRY_DELAY * 2 ** ad.numOfTries
+                ad.nextTryTimestamp = Date.now() + NEXT_RETRY_DELAY * 2 ** ad.numOfTries
                 // stop trying to download
                 if (ad.numOfTries >= MAX_NUM_OF_DOWNLOAD_ATTEMPTS) {
                     ad.failedToDownLoad = true
@@ -76,18 +86,29 @@ async function main() {
         ad.error = error
         }
 
-        // console.log(downloadResult.extension)
-        // do not download files more than 10 Mb
-        /*
-        if (successfullyDownloaded && isCorrectFormat) {
-            gotChanges = true
+        // resize images
+        if (ad.fullImageBinary) {
+            let ie = ImageEditor({})
+            // image for thumbnail will fit configured size
+            ad.imageThumb = ie.fitInside(
+                ad.fullImageBinary,
+                THUMBNAIL_PARAMS.width,
+                THUMBNAIL_PARAMS.height,
+                'inside',
+                true)
+            // image for pixelMap will resize ignoring aspect ratio
+            // will also enlarge image if too small
+            ad.width = getDimensions(ad).width
+            ad.height = getDimensions(ad).height
+            ad.imageForPixelMap = ie.fitInside(
+                ad.fullImageBinary,
+                ad.width,
+                ad.height,
+                'fill',
+                false)
+            // clear full image binary
+            ad.fullImage = ""
         }
-        let width = modulo(ad.toX - ad.fromX) // TODO see old middle using modulo, because contract allows mixing coords
-        let height = modulo(ad.toY - ad.fromY)
-        ad.resizedImage = renderer.resizeImage(ad.fullImage, width, height)
-        ad.fullImage = ""
-    
-    */
     }
     // db.appendImagesToAds(ads)
 }

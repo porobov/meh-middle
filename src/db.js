@@ -73,14 +73,12 @@ class DB {
     }
 
     async getAdsNoImages() {
-      // TODO exclude images that failed to download
-      // TODO add images that require a next try
       var myquery =  
         {
           $and: [
             { $or:[
-              {nextRetryTimestamp: {$gt:Date.now()}},
-              {nextRetryTimestamp: {$exists:false}}]}, 
+              {nextTryTimestamp: {$gt:Date.now()}},
+              {nextTryTimestamp: {$exists:false}}]}, 
             { $or:[
               {failedToDownLoad: false },
               {failedToDownLoad: {$exists:false}}]}, 
