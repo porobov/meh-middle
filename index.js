@@ -5,6 +5,7 @@ const { WebGateway } = require("./src/web.js")
 let db = new DB(hre.config.dbConf)
 NEXT_RETRY_DELAY = 1000 * 60 * 5 // 5 minutes
 MAX_NUM_OF_DOWNLOAD_ATTEMPTS = 5
+STATUSCODES_ALLOWING_RETRY = [ 408, 502, 503, 504, 429 ]
 /*
 let renderer = new Renderer()
 let downloader = new WWW
@@ -46,7 +47,6 @@ async function main() {
 
     let wg = new WebGateway()
     // download images and save to db
-    let adsGotChanges = false
     for (ad of ads) {
         let [ downloadResult, error ] = await wg.downloadImage(ad.imageSourceUrl)
         if (downloadResult) { 
@@ -56,13 +56,7 @@ async function main() {
         } else {
             if (Object.hasOwn(error, 'response') 
                 && Object.hasOwn(error.response, 'status')
-                && (
-                    (error.response.status == 408)
-                    || (error.response.status == 502)
-                    || (error.response.status == 503)
-                    || (error.response.status == 504)
-                    || (error.response.status == 429)
-                    )
+                && STATUSCODES_ALLOWING_RETRY.includes(error.response.status)
             ) {
                 // try later for the errors above
                 if(Object.hasOwn(ad, "numOfTries") && ad.numOfTries >= 0) {
@@ -79,6 +73,7 @@ async function main() {
                 // stop downloading attempts if received this flag
                 ad.failedToDownLoad = true
             }
+        ad.error = error
         }
 
         // console.log(downloadResult.extension)
