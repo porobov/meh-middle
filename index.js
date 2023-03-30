@@ -4,6 +4,7 @@ const hre = require("hardhat");
 const { WebGateway } = require("./src/web.js")
 let db = new DB(hre.config.dbConf)
 NEXT_RETRY_DELAY = 1000 * 60 * 5 // 5 minutes
+MAX_NUM_OF_DOWNLOAD_ATTEMPTS = 5
 /*
 let renderer = new Renderer()
 let downloader = new WWW
@@ -63,13 +64,17 @@ async function main() {
                     || (error.response.status == 429)
                     )
             ) {
-                // try later for these errors 
+                // try later for the errors above
                 if(Object.hasOwn(ad, "numOfTries") && ad.numOfTries >= 0) {
                     ad.numOfTries ++
                 } else {
                     ad.numOfTries = 1
                 }
                 ad.nextRetryTimestamp = Date.now() + NEXT_RETRY_DELAY * 2 ** ad.numOfTries
+                // stop trying to download
+                if (ad.numOfTries >= MAX_NUM_OF_DOWNLOAD_ATTEMPTS) {
+                    ad.failedToDownLoad = true
+                }
             } else {
                 // stop downloading attempts if received this flag
                 ad.failedToDownLoad = true

@@ -2,6 +2,8 @@ const fs = require('fs')
 const Path = require('path')  
 const axios = require('axios')
 const ufs = require("url-file-size")
+const SUPPORTED_FORMATS = ["jpg", "png", "gif", "tif"] // , "bmp"] // , "jp2", "jpm", "jpx"]
+
 class WebGateway {
   
   constructor(conf) {
@@ -9,24 +11,21 @@ class WebGateway {
   }
   
   async downloadImage(imageUrl) {
-    let response = null
     try {
-      response = await axios.get(imageUrl, { responseType: 'arraybuffer' });
-    } catch (e){
-      return [null, e]
-    }
-
-    try {
+      let response = await axios.get(imageUrl, { responseType: 'arraybuffer' });
       const buffer = Buffer.from(response.data, 'binary');
       const imageFormat = await (await import("image-type")).default(buffer)
-        return [
-          {
-            binary: buffer,
-            extension: imageFormat.ext
-          },
-          null
-        ]
+      if (!SUPPORTED_FORMATS.includes(imageFormat.ext)) {
+        throw new Error ('Image format is not supported') 
       }
+      return [
+        {
+          binary: buffer,
+          extension: imageFormat.ext
+        },
+        null
+      ]
+    }
     catch (e) {
       return [null, e]
     }
