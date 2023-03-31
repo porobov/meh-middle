@@ -22,5 +22,5 @@ class ImageEditor {
 }
 
 module.exports = {
-  DB,
+  ImageEditor,
 }

@@ -2,6 +2,7 @@ const { MillionEther } = require("./src/chain.js")
 const { DB } = require("./src/db.js")
 const hre = require("hardhat");
 const { WebGateway } = require("./src/web.js")
+const { ImageEditor } = require("./src/imageEditor.js")
 let db = new DB(hre.config.dbConf)
 NEXT_RETRY_DELAY = 1000 * 60 * 5 // 5 minutes
 MAX_NUM_OF_DOWNLOAD_ATTEMPTS = 5
@@ -90,28 +91,35 @@ async function main() {
         if (ad.fullImageBinary) {
             let ie = ImageEditor({})
             // image for thumbnail will fit configured size
-            ad.imageThumb = ie.fitInside(
+            let [ imageBuffer, error ] = ie.fitInside(
                 ad.fullImageBinary,
                 THUMBNAIL_PARAMS.width,
                 THUMBNAIL_PARAMS.height,
                 'inside',
                 true)
+            ad.imageThumb = imageBuffer // null if error
+            
             // image for pixelMap will resize ignoring aspect ratio
             // will also enlarge image if too small
             ad.width = getDimensions(ad).width
             ad.height = getDimensions(ad).height
-            ad.imageForPixelMap = ie.fitInside(
+            [ imageBuffer, error ] = ie.fitInside(
                 ad.fullImageBinary,
                 ad.width,
                 ad.height,
                 'fill',
                 false)
+            ad.imageForPixelMap = imageBuffer // null if error
+
+            // single write of error for both resizes
+            if ( error ) { ad.error = error }
             // clear full image binary
-            ad.fullImage = ""
+            ad.fullImageBinary = ""
         }
     }
     // db.appendImagesToAds(ads)
 }
+
 
 /*
 
