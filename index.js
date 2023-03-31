@@ -17,8 +17,8 @@ let downloader = new WWW
 */
 function getDimensions(adRecord) {
     return {
-        width: adRecord.toX - adRecord.fromX,
-        height: adRecord.toY - adRecord.fromY
+        width: (1 + adRecord.toX - adRecord.fromX),
+        height: (1 + adRecord.toY - adRecord.fromY)
     }
 }
 async function main() {
@@ -54,16 +54,17 @@ async function main() {
     await db.connect()
     let ads = await db.getAdsNoImages()
     console.log("ads from db count", ads.length)
-    await db.close()
+    // await db.close()
 
     let wg = new WebGateway()
     // download images and save to db
     for (ad of ads) {
+        ad.updates = {}
         let [ downloadResult, error ] = await wg.downloadImage(ad.imageSourceUrl)
         if (downloadResult) { 
             // full image binary is a temporary value. It shouldn't be save to db
             ad.fullImageBinary = downloadResult.binary
-            ad.imageExtension = downloadResult.extension
+            ad.updates.imageExtension = downloadResult.extension
         } else {
             if (Object.hasOwn(error, 'response') 
                 && Object.hasOwn(error.response, 'status')
@@ -78,46 +79,50 @@ async function main() {
                 ad.nextTryTimestamp = Date.now() + NEXT_RETRY_DELAY * 2 ** ad.numOfTries
                 // stop trying to download
                 if (ad.numOfTries >= MAX_NUM_OF_DOWNLOAD_ATTEMPTS) {
-                    ad.failedToDownLoad = true
+                    ad.updates.failedToDownLoad = true
                 }
             } else {
                 // stop downloading attempts if received this flag
-                ad.failedToDownLoad = true
+                ad.updates.failedToDownLoad = true
             }
-        ad.error = error
+        ad.updates.error = error
         }
 
         // resize images
         if (ad.fullImageBinary) {
-            let ie = ImageEditor({})
+            let ie = new ImageEditor({})
             // image for thumbnail will fit configured size
-            let [ imageBuffer, error ] = ie.fitInside(
+            let [ imageBuffer, error ] = await ie.fitInside(
                 ad.fullImageBinary,
                 THUMBNAIL_PARAMS.width,
                 THUMBNAIL_PARAMS.height,
                 'inside',
                 true)
-            ad.imageThumb = imageBuffer // null if error
+            ad.updates.imageThumb = imageBuffer // null if error
             
             // image for pixelMap will resize ignoring aspect ratio
             // will also enlarge image if too small
-            ad.width = getDimensions(ad).width
-            ad.height = getDimensions(ad).height
-            [ imageBuffer, error ] = ie.fitInside(
+            ad.updates.width = getDimensions(ad).width
+            ad.updates.height = getDimensions(ad).height
+            ;[ imageBuffer, error ] = await ie.fitInside(
                 ad.fullImageBinary,
-                ad.width,
-                ad.height,
+                ad.updates.width,
+                ad.updates.height,
                 'fill',
                 false)
-            ad.imageForPixelMap = imageBuffer // null if error
+            ad.updates.imageForPixelMap = imageBuffer // null if error
 
             // single write of error for both resizes
-            if ( error ) { ad.error = error }
+            if ( error ) { ad.updates.error = error }
             // clear full image binary
             ad.fullImageBinary = ""
         }
     }
-    // db.appendImagesToAds(ads)
+    // await db.connect()
+    // TODO when should db connected and closed
+    let updateResult = await db.appendImagesToAds(ads)
+    await db.close()
+    console.log(updateResult)
 }
 
 

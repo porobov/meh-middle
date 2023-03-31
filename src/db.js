@@ -1,5 +1,5 @@
 const { MongoClient } = require("mongodb")
-IMAGES_BATCH_SIZE = 10
+IMAGES_BATCH_SIZE = 2
 
 class DB {
 
@@ -85,14 +85,28 @@ class DB {
             { imageThumb: null }
           ]
         }
-      
-      let cursor = this.ads.find(myquery).limit(IMAGES_BATCH_SIZE)
+      let projection = { numOfTries: 1, imageSourceUrl: 1, ID: 1 }
+      let cursor = this.ads.find(myquery, projection).limit(IMAGES_BATCH_SIZE)
       return await cursor.toArray()
     }
 
     async appendImagesToAds(ads) {
-      
+      // prepare bulkwrite array
+      let operations = []
+      for (ad of ads) {
+        let setFields = {}
+        operations.push(
+          { updateOne: 
+            {
+              "filter": { ID: ad.ID},
+              "update": { $set: ad.updates }
+            }
+          }
+        )
+      }  
+    return await this.ads.bulkWrite(operations, { ordered: false })
     }
+
     // Allowed error codes ECONNREFUSED 
     tryCatch = async (tryer) => {
         try {
