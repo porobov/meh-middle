@@ -103,8 +103,13 @@ class DB {
             }
           }
         )
-      }  
-    return await this.ads.bulkWrite(operations, { ordered: false })
+      }
+      // TODO try-catch
+      let result = null
+      if (operations.length > 0) {
+        result = await this.ads.bulkWrite(operations, { ordered: false })
+      }
+      return [ result, null ]
     }
 
     // Allowed error codes ECONNREFUSED 

@@ -85,7 +85,7 @@ async function main() {
                 // stop downloading attempts if received this flag
                 ad.updates.failedToDownLoad = true
             }
-        ad.updates.error = error
+        ad.updates.error = JSON.stringify(error, Object.getOwnPropertyNames(error))
         }
 
         // resize images
@@ -120,7 +120,7 @@ async function main() {
     }
     // await db.connect()
     // TODO when should db connected and closed
-    let updateResult = await db.appendImagesToAds(ads)
+    let [ updateResult, updateError ] = await db.appendImagesToAds(ads)
     await db.close()
     console.log(updateResult)
 }
