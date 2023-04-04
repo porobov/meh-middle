@@ -22,12 +22,10 @@ function getDimensions(adRecord) {
     }
 }
 async function main() {
-/*
     // get latest block
     await db.connect()
     let eventName = "NewImage"
-    let fromBlock = await db.getLatestBlockForEvent(eventName)
-    await db.close()
+    let [ fromBlock, lbError ] = await db.getLatestBlockForEvent(eventName)
     console.log(`${eventName} event latest block in DB is ${fromBlock}`)
     
     // get events
@@ -39,25 +37,20 @@ async function main() {
     console.log(`Got ${newEvents.decodedEvents.length} new events till block ${newEvents.blockNumber}`)
 
     // save new events to db
-    await db.connect()
     if (newEvents.decodedEvents.length > 0) {
-        const insertResults = await db.addAds(newEvents.decodedEvents)
+        const [ insertResults, insertError ] = await db.addAds(newEvents.decodedEvents)
         console.log(`${insertResults.insertedCount} events were inserted`)
     }
 
-    // save block numer for event    
-    await db.saveLatestBlockForEvent(eventName, newEvents.blockNumber)
-    console.log(`Saved new latest block to db`)
-    await db.close()
+    // save block number for event    
+    let [saveResult, saveError] = await db.saveLatestBlockForEvent(eventName, newEvents.blockNumber)
+    console.log(saveResult)
 
-    */
-    await db.connect()
-    let ads = await db.getAdsNoImages()
+    // download images and save to db
+    let [ ads, adsLoadError ] = await db.getAdsNoImages()
     console.log("ads from db count", ads.length)
-    // await db.close()
 
     let wg = new WebGateway()
-    // download images and save to db
     for (ad of ads) {
         ad.updates = {}
         let [ downloadResult, error ] = await wg.downloadImage(ad.imageSourceUrl)
@@ -118,7 +111,6 @@ async function main() {
             ad.fullImageBinary = ""
         }
     }
-    // await db.connect()
     // TODO when should db connected and closed
     let [ updateResult, updateError ] = await db.appendImagesToAds(ads)
     await db.close()

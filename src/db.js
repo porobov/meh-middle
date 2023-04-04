@@ -10,16 +10,17 @@ class DB {
 
     async connect(dbName) {
         const [res, err] = await this.tryCatch(async () => await this.client.connect())
-        console.log("error:", err)  // TODO manage errors correctly
-        this.db = this.client.db(this.conf.dbName)
-        this.col = this.db.collection("people")
-        this.state = this.db.collection("state")
-        this.ads = this.db.collection("ads")
-        this.tempStateId = this.conf.stateRecordName
+        if (!err) {
+          this.db = this.client.db(this.conf.dbName)
+          this.col = this.db.collection("people")
+          this.state = this.db.collection("state")
+          this.ads = this.db.collection("ads")
+          this.tempStateId = this.conf.stateRecordName
+        }
     }
     
     async close() {
-        await this.client.close()
+        const [res, err] = await this.tryCatch(async () => await this.client.close())
     }
 
     // State
@@ -41,35 +42,29 @@ class DB {
     async saveLatestBlockForEvent(eventName, latestBlock) {
         var myquery = { state_id: this.tempStateId };
         var newvalues = { $set: { [this.recordNameForEvent(eventName)]: latestBlock} };
-        await this.state.updateOne(myquery, newvalues)
+        return await this.tryCatch(
+          async () => await this.state.updateOne(myquery, newvalues))
     }
 
     async getLatestBlockForEvent(eventName) {
         var myquery = { state_id: this.tempStateId };
-        const stateRecord = await this.state.findOne(myquery)
-        return stateRecord[this.recordNameForEvent(eventName)]
+        return await this.tryCatch(
+          async () => await this.state.findOne(myquery)[this.recordNameForEvent(eventName)])
     }
 
     // Saving events
 
     async createEmptyEventsCollection(eventName) {
-        // TODO delete if exists
         await this.ads.createIndex( { "ID": 1 }, { unique: true } )
     }
 
-    // TODO manage errors correctly
     async addAds(decodedEvents) {
-        try {
-            const result = await this.ads.insertMany(decodedEvents, { ordered: false })
-            return result
-          } catch (error) {
-            if (error.code === 11000) {
-              console.log('Duplicate key error');
-            } else {
-              console.log(error);
-            }
-            return 0
-          }   
+      const [res, err] = await this.tryCatch(
+        async () => await this.ads.insertMany(decodedEvents, { ordered: false }))
+      if (err && Object.hasOwn(err, 'code') && err.code === 11000) {
+        console.log('Duplicate key error');
+      } 
+      return [res, err]
     }
 
     async getAdsNoImages() {
@@ -86,45 +81,38 @@ class DB {
           ]
         }
       let projection = { numOfTries: 1, imageSourceUrl: 1, ID: 1 }
-      let cursor = this.ads.find(myquery, projection).limit(IMAGES_BATCH_SIZE)
-      return await cursor.toArray()
+      let cursor = this.ads.find(myquery).project(projection).limit(IMAGES_BATCH_SIZE)
+      return await this.tryCatch(async () => await cursor.toArray())
     }
 
     async appendImagesToAds(ads) {
       // prepare bulkwrite array
       let operations = []
       for (ad of ads) {
-        let setFields = {}
-        operations.push(
-          { updateOne: 
-            {
+        operations.push({ updateOne: {
               "filter": { ID: ad.ID},
               "update": { $set: ad.updates }
             }
-          }
-        )
+          })
       }
-      // TODO try-catch
-      let result = null
+      // bulk write
       if (operations.length > 0) {
-        result = await this.ads.bulkWrite(operations, { ordered: false })
+        return await this.tryCatch(
+          async () => await this.ads.bulkWrite(operations, { ordered: false }))
+      } else { 
+        return [ null, null ]
       }
-      return [ result, null ]
     }
 
-    // Allowed error codes ECONNREFUSED 
     tryCatch = async (tryer) => {
         try {
           const result = await tryer()
           return [result, null]
         } catch (error) {
+          console.log(error)
           return [null, error]
         }
     }
-
-    // finally {
-    //     await client.close()
-    // }
 }
 
 module.exports = {
