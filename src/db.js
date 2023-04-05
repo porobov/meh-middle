@@ -1,4 +1,5 @@
 const { MongoClient } = require("mongodb")
+const chalk = require("chalk")
 IMAGES_BATCH_SIZE = 2
 
 class DB {
@@ -42,8 +43,13 @@ class DB {
     async saveLatestBlockForEvent(eventName, latestBlock) {
         var myquery = { state_id: this.tempStateId };
         var newvalues = { $set: { [this.recordNameForEvent(eventName)]: latestBlock} };
-        return await this.tryCatch(
+        const [ saveResult, err ] = await this.tryCatch(
           async () => await this.state.updateOne(myquery, newvalues))
+        if (saveResult && Object.hasOwn(saveResult, 'modifiedCount') && saveResult.modifiedCount == 1) {
+          return [true, err]
+        } else {
+          return [false, err]
+        }
     }
 
     async getLatestBlockForEvent(eventName) {
@@ -55,16 +61,29 @@ class DB {
     // Saving events
 
     async createEmptyEventsCollection(eventName) {
-        await this.ads.createIndex( { "ID": 1 }, { unique: true } )
+      const [res, err] = await this.tryCatch(
+        async () => await this.ads.find().toArray())
+      if (res.length > 0) {
+        console.log(`Dropping collection...`)
+        this.ads.drop()
+      } 
+      console.log(`Creating collection`)
+      await this.ads.createIndex( { "ID": 1 }, { unique: true } )
     }
 
+    // returns array
     async addAds(decodedEvents) {
       const [res, err] = await this.tryCatch(
         async () => await this.ads.insertMany(decodedEvents, { ordered: false }))
       if (err && Object.hasOwn(err, 'code') && err.code === 11000) {
         console.log('Duplicate key error');
       } 
-      return [res, err]
+      if (res) {
+        const count = Object.hasOwn(res, 'insertedCount') ? res.insertedCount : 0
+        return [count, err]
+      } else {
+        return [0, err]
+      }
     }
 
     async getAdsNoImages() {
@@ -81,8 +100,17 @@ class DB {
           ]
         }
       let projection = { numOfTries: 1, imageSourceUrl: 1, ID: 1 }
-      let cursor = this.ads.find(myquery).project(projection).limit(IMAGES_BATCH_SIZE)
-      return await this.tryCatch(async () => await cursor.toArray())
+      let [res, err ] = await this.tryCatch(
+        async () => await this.ads
+          .find(myquery)
+          .project(projection)
+          .limit(IMAGES_BATCH_SIZE)
+          .toArray())
+      if (res && res.isArray) {
+        return [res, err]
+      } else {
+        return [[], err]
+      }
     }
 
     async appendImagesToAds(ads) {
@@ -109,7 +137,9 @@ class DB {
           const result = await tryer()
           return [result, null]
         } catch (error) {
+          console.log(chalk.red(" ↓↓↓ Cought error ↓↓↓ "))
           console.log(error)
+          console.log(chalk.red(" ↑↑↑ Cought error ↑↑↑ "))
           return [null, error]
         }
     }

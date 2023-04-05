@@ -38,26 +38,31 @@ async function main() {
 
     // save new events to db
     if (newEvents.decodedEvents.length > 0) {
-        const [ insertResults, insertError ] = await db.addAds(newEvents.decodedEvents)
-        console.log(`${insertResults.insertedCount} events were inserted`)
+        const [ insertsCount, insertError ] = await db.addAds(newEvents.decodedEvents)
+        console.log(`${ insertsCount } new events were written to db`)
     }
 
     // save block number for event    
-    let [saveResult, saveError] = await db.saveLatestBlockForEvent(eventName, newEvents.blockNumber)
-    console.log(saveResult)
+    let [savedSuccessfully, saveError] = await db.saveLatestBlockForEvent(eventName, newEvents.blockNumber)
+    if (savedSuccessfully) {
+        console.log(`Saved block ${newEvents.blockNumber} for ${eventName} event to db`)
+    }
+
+    // get ads with no images (not downloaded)
+    let [ ads, adsLoadError ] = await db.getAdsNoImages()
+    console.log(`Got ${ads.length} ads with no images.`)
 
     // download images and save to db
-    let [ ads, adsLoadError ] = await db.getAdsNoImages()
-    console.log("ads from db count", ads.length)
-
     let wg = new WebGateway()
     for (ad of ads) {
         ad.updates = {}
+        console.log(`Downloading image from ${ad.imageSourceUrl}...`)
         let [ downloadResult, error ] = await wg.downloadImage(ad.imageSourceUrl)
         if (downloadResult) { 
             // full image binary is a temporary value. It shouldn't be save to db
             ad.fullImageBinary = downloadResult.binary
             ad.updates.imageExtension = downloadResult.extension
+            console.log(`Downloaded ${downloadResult.imageExtension} image`)
         } else {
             if (Object.hasOwn(error, 'response') 
                 && Object.hasOwn(error.response, 'status')
@@ -74,9 +79,11 @@ async function main() {
                 if (ad.numOfTries >= MAX_NUM_OF_DOWNLOAD_ATTEMPTS) {
                     ad.updates.failedToDownLoad = true
                 }
+                console.log(`Could not download (status code: ${error.response.status}). Will try later. Attempt: ${ad.numOfTries}`)
             } else {
                 // stop downloading attempts if received this flag
                 ad.updates.failedToDownLoad = true
+                console.log(`Failed to download`) 
             }
         ad.updates.error = JSON.stringify(error, Object.getOwnPropertyNames(error))
         }
@@ -106,7 +113,9 @@ async function main() {
             ad.updates.imageForPixelMap = imageBuffer // null if error
 
             // single write of error for both resizes
-            if ( error ) { ad.updates.error = error }
+            if ( error ) {
+                ad.updates.error = JSON.stringify(error, Object.getOwnPropertyNames(error))
+            }
             // clear full image binary
             ad.fullImageBinary = ""
         }
