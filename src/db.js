@@ -95,7 +95,7 @@ class DB {
             { $or:[
               {failedToDownLoad: false },
               {failedToDownLoad: {$exists:false}}]}, 
-            { imageThumb: null }
+            { imageThumb: {$exists:false} }
           ]
         }
       let projection = { numOfTries: 1, imageSourceUrl: 1, ID: 1 }
@@ -105,7 +105,7 @@ class DB {
           .project(projection)
           .limit(IMAGES_BATCH_SIZE)
           .toArray())
-      if (res && res.isArray) {
+      if (res && Array.isArray(res)) {
         return [res, err]
       } else {
         return [[], err]
