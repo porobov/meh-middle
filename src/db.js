@@ -13,7 +13,6 @@ class DB {
         const [res, err] = await this.tryCatch(async () => await this.client.connect())
         if (!err) {
           this.db = this.client.db(this.conf.dbName)
-          this.col = this.db.collection("people")
           this.state = this.db.collection("state")
           this.ads = this.db.collection("ads")
           this.tempStateId = this.conf.stateRecordName
@@ -31,12 +30,12 @@ class DB {
         await this.state.createIndex( { "state_id": 1 }, { unique: true } )
         let emptyStateRecord = {
             "state_id": this.tempStateId,
-            "latestNewImageEventBlock": 1250000
+            [this.recordNameForEvent(eventName)]: 0
         }
         const p = await this.state.insertOne(emptyStateRecord)
     }
 
-    async recordNameForEvent(eventName) {
+    recordNameForEvent(eventName) {
         return "latestBlockFor" + eventName
     }
 
@@ -55,7 +54,7 @@ class DB {
     async getLatestBlockForEvent(eventName) {
         var myquery = { state_id: this.tempStateId };
         return await this.tryCatch(
-          async () => await this.state.findOne(myquery)[this.recordNameForEvent(eventName)])
+          async () => (await this.state.findOne(myquery))[this.recordNameForEvent(eventName)])
     }
 
     // Saving events
