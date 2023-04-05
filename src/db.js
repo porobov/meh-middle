@@ -90,19 +90,17 @@ class DB {
         {
           $and: [
             { $or:[
-              {nextTryTimestamp: {$gt:Date.now()}},
+              {nextTryTimestamp: {$lt:Date.now()}},
               {nextTryTimestamp: {$exists:false}}]}, 
             { $or:[
               {failedToDownLoad: false },
               {failedToDownLoad: {$exists:false}}]}, 
-            { imageThumb: {$exists:false} }
+            { imageForPixelMap: {$exists:false} }
           ]
         }
-      let projection = { numOfTries: 1, imageSourceUrl: 1, ID: 1 }
       let [res, err ] = await this.tryCatch(
         async () => await this.ads
           .find(myquery)
-          .project(projection)
           .limit(IMAGES_BATCH_SIZE)
           .toArray())
       if (res && Array.isArray(res)) {
@@ -123,11 +121,15 @@ class DB {
           })
       }
       // bulk write
+      let [ res, err ] = [ null, null ]
       if (operations.length > 0) {
-        return await this.tryCatch(
+        [res, err ] = await this.tryCatch(
           async () => await this.ads.bulkWrite(operations, { ordered: false }))
+      }
+      if (res && Object.hasOwn(res, 'modifiedCount') && res.modifiedCount > 0) {
+        return [ res.modifiedCount , err ]
       } else { 
-        return [ null, null ]
+        return [ 0 , err ]
       }
     }
 

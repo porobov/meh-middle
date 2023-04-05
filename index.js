@@ -32,9 +32,9 @@ async function main() {
     let contractName = "MillionEther"
     let contractAddress = "0x15dbdB25f870f21eaf9105e68e249E0426DaE916"
     let contract = new MillionEther(contractName, contractAddress)
-    console.log(`Checking ${eventName} event starting from block ${fromBlock}`)
+    // console.log(`Checking ${eventName} event starting from block ${fromBlock}`)
     let newEvents = await contract.getEvents(eventName, fromBlock)
-    console.log(`Got ${newEvents.decodedEvents.length} new events till block ${newEvents.blockNumber}`)
+    console.log(`Received ${newEvents.decodedEvents.length} new events till block ${newEvents.blockNumber}`)
 
     // save new events to db
     if (newEvents.decodedEvents.length > 0) {
@@ -56,36 +56,37 @@ async function main() {
     let wg = new WebGateway()
     for (ad of ads) {
         ad.updates = {}
-        console.log(`Downloading image from ${ad.imageSourceUrl}...`)
+        console.log(`Downloading image for ad ID ${ad.ID} from ${ad.imageSourceUrl}...`)
         let [ downloadResult, error ] = await wg.downloadImage(ad.imageSourceUrl)
         if (downloadResult) { 
             // full image binary is a temporary value. It shouldn't be save to db
             ad.fullImageBinary = downloadResult.binary
             ad.updates.imageExtension = downloadResult.extension
-            console.log(`Downloaded ${downloadResult.imageExtension} image`)
+            console.log(`Downloaded ${downloadResult.extension} image`)
         } else {
             if (Object.hasOwn(error, 'response') 
                 && Object.hasOwn(error.response, 'status')
                 && STATUSCODES_ALLOWING_RETRY.includes(error.response.status)
             ) {
                 // try later for the errors above
+                let numOfTries = 0
                 if(Object.hasOwn(ad, "numOfTries") && ad.numOfTries >= 0) {
-                    ad.numOfTries ++
-                } else {
-                    ad.numOfTries = 1
+                    numOfTries = ad.numOfTries
                 }
-                ad.nextTryTimestamp = Date.now() + NEXT_RETRY_DELAY * 2 ** ad.numOfTries
+                numOfTries ++
+                ad.updates.numOfTries = numOfTries
+                ad.updates.nextTryTimestamp = Date.now() + NEXT_RETRY_DELAY * 2 ** (numOfTries - 1)
                 // stop trying to download
                 if (ad.numOfTries >= MAX_NUM_OF_DOWNLOAD_ATTEMPTS) {
                     ad.updates.failedToDownLoad = true
                 }
-                console.log(`Could not download (status code: ${error.response.status}). Will try later. Attempt: ${ad.numOfTries}`)
+                console.log(`Could not download (status code: ${error.response.status}). Will try later. Attempts: ${numOfTries}`)
             } else {
                 // stop downloading attempts if received this flag
                 ad.updates.failedToDownLoad = true
                 console.log(`Failed to download`) 
             }
-        ad.updates.error = JSON.stringify(error, Object.getOwnPropertyNames(error))
+        ad.updates.error = JSON.stringify(error) // , Object.getOwnPropertyNames(error))
         }
 
         // resize images
@@ -99,7 +100,6 @@ async function main() {
                 'inside',
                 true)
             ad.updates.imageThumb = imageBuffer // null if error
-            
             // image for pixelMap will resize ignoring aspect ratio
             // will also enlarge image if too small
             ad.updates.width = getDimensions(ad).width
@@ -111,6 +111,7 @@ async function main() {
                 'fill',
                 false)
             ad.updates.imageForPixelMap = imageBuffer // null if error
+            console.log(`Created image for pixel map`)
 
             // single write of error for both resizes
             if ( error ) {
@@ -120,10 +121,9 @@ async function main() {
             ad.fullImageBinary = ""
         }
     }
-    // TODO when should db connected and closed
-    let [ updateResult, updateError ] = await db.appendImagesToAds(ads)
+    let [ updatesCount , updateError ] = await db.appendImagesToAds(ads)
     await db.close()
-    console.log(updateResult)
+    console.log(`Updated ${updatesCount} images in the db`)
 }
 
 
