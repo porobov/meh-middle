@@ -27,12 +27,19 @@ class DB {
 
     // creating empty one for the first db setup
     async createEmptyStateRecord() {
-        await this.state.createIndex( { "state_id": 1 }, { unique: true } )
-        let emptyStateRecord = {
-            "state_id": this.tempStateId,
-            [this.recordNameForEvent(eventName)]: 0
-        }
-        const p = await this.state.insertOne(emptyStateRecord)
+      const [res, err] = await this.tryCatch(
+        async () => await this.state.find().toArray())
+      if (res.length > 0) {
+        console.log(`Dropping state...`)
+        this.state.drop()
+      }
+      let eventName = "NewImage"
+      await this.state.createIndex( { "state_id": 1 }, { unique: true } )
+      let emptyStateRecord = {
+          "state_id": this.tempStateId,
+          [this.recordNameForEvent(eventName)]: 0
+      }
+      const p = await this.state.insertOne(emptyStateRecord)
     }
 
     recordNameForEvent(eventName) {
