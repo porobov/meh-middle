@@ -13,15 +13,13 @@ class MillionEther {
     const events = await contract.queryFilter(eventFilter, fromBlock, latestBlock)
     // if event name is NewImage
     const strippedEvents = events.map(ev => {
-    // TODO make shure coordinates are correct. 
-    // let width = modulo(ad.toX - ad.fromX) // TODO see old middle using modulo, because contract allows mixing coords
-    // let height = modulo(ad.toY - ad.fromY)
       return {
         ID: ev.args.ID.toNumber(),
-        fromX: ev.args.fromX,
-        fromY: ev.args.fromY,
-        toX: ev.args.toX,
-        toY: ev.args.toY,
+        // fixing smart contract bug. Coordinates may be mixed up
+        fromX: ev.args.fromX < ev.args.toX ? ev.args.fromX : ev.args.toX,
+        fromY: ev.args.fromY < ev.args.toY ? ev.args.fromY : ev.args.toY,
+        toX: ev.args.toX > ev.args.fromX ? ev.args.toX : ev.args.fromX,
+        toY: ev.args.toY > ev.args.fromY ? ev.args.toY : ev.args.fromY,
         adText: ev.args.adText,
         adUrl: ev.args.adUrl,
         imageSourceUrl: ev.args.imageSourceUrl
