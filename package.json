@@ -28,6 +28,7 @@
     "image-type": "^5.2.0",
     "mongodb": "^5.1.0",
     "sharp": "^0.32.0",
-    "url-file-size": "^1.0.5-1"
+    "url-file-size": "^1.0.5-1",
+    "winston": "^3.8.2"
   }
 }
