@@ -1,4 +1,5 @@
 const sharp = require('sharp');
+const { logger } = require("./logger.js")
 
 class ImageEditor {
 

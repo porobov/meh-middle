@@ -3,7 +3,7 @@ const { DB } = require("./src/db.js")
 const hre = require("hardhat");
 const { WebGateway } = require("./src/web.js")
 const { ImageEditor } = require("./src/imageEditor.js")
-const winston = require('winston')
+const { logger } = require("./src/logger.js")
 NEXT_RETRY_DELAY = 1000 * 60 * 5 // 5 minutes
 MAX_NUM_OF_DOWNLOAD_ATTEMPTS = 5
 STATUSCODES_ALLOWING_RETRY = [ 408, 502, 503, 504, 429 ]
@@ -20,12 +20,6 @@ function getDimensions(adRecord) {
 }
 
 async function main() {
-    const logger = winston.createLogger({
-        level: 'info',
-        format: winston.format.json(),
-        transports: [new winston.transports.Console()],
-      });
-
     // get latest block
     let db = new DB(hre.config.dbConf)
     await db.connect()

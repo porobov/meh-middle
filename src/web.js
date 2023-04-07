@@ -1,6 +1,7 @@
 const fs = require('fs')  
 const Path = require('path')  
 const axios = require('axios')
+const { logger } = require("./logger.js")
 const ufs = require("url-file-size")
 const SUPPORTED_FORMATS = ["jpg", "png", "gif", "tif"] // , "bmp"] // , "jp2", "jpm", "jpx"]
 
@@ -36,7 +37,7 @@ class WebGateway {
     // const writer = fs.createWriteStream(path)
     fs.writeFileSync(filename, imageBuffer, 'binary', (err) => {
       if (err) throw err;
-      console.log(`The file ${filename} has been saved!`);
+      logger.info(`The file ${filename} has been saved!`);
     });
   }
 

@@ -1,5 +1,6 @@
 const { MongoClient } = require("mongodb")
 const chalk = require("chalk")
+const { logger } = require("./logger.js")
 IMAGES_BATCH_SIZE = 2
 
 class DB {
@@ -30,10 +31,10 @@ class DB {
       const [res, err] = await this.tryCatch(
         async () => await this.state.find().toArray())
       if (res.length > 0) {
-        console.log(`Dropping state...`)
+        logger.info(`Dropping state...`)
         this.state.drop()
       }
-      let eventName = "NewImage"
+      const eventName = "NewImage"
       await this.state.createIndex( { "state_id": 1 }, { unique: true } )
       let emptyStateRecord = {
           "state_id": this.tempStateId,
@@ -70,10 +71,10 @@ class DB {
       const [res, err] = await this.tryCatch(
         async () => await this.ads.find().toArray())
       if (res.length > 0) {
-        console.log(`Dropping collection...`)
+        logger.info(`Dropping collection...`)
         this.ads.drop()
       } 
-      console.log(`Creating collection`)
+      logger.info(`Creating collection`)
       await this.ads.createIndex( { "ID": 1 }, { unique: true } )
     }
 
@@ -82,7 +83,7 @@ class DB {
       const [res, err] = await this.tryCatch(
         async () => await this.ads.insertMany(decodedEvents, { ordered: false }))
       if (err && Object.hasOwn(err, 'code') && err.code === 11000) {
-        console.log('Duplicate key error');
+        logger.info('Duplicate key error');
       } 
       if (res) {
         const count = Object.hasOwn(res, 'insertedCount') ? res.insertedCount : 0
@@ -145,9 +146,9 @@ class DB {
           const result = await tryer()
           return [result, null]
         } catch (error) {
-          console.log(chalk.red(" ↓↓↓ Cought error ↓↓↓ "))
-          console.log(error)
-          console.log(chalk.red(" ↑↑↑ Cought error ↑↑↑ "))
+          logger.info(chalk.red(" ↓↓↓ Cought error ↓↓↓ "))
+          logger.info(error)
+          logger.info(chalk.red(" ↑↑↑ Cought error ↑↑↑ "))
           return [null, error]
         }
     }
