@@ -29,7 +29,7 @@ class DB {
     // creating empty one for the first db setup
     async createEmptyStateRecord() {
       const [res, err] = await this.tryCatch(
-        async () => await this.state.find().toArray())
+        async () => await this.state.find().limit(1).toArray())
       if (res.length > 0) {
         logger.info(`Dropping state...`)
         this.state.drop()

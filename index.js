@@ -3,7 +3,8 @@ const { DB } = require("./src/db.js")
 const hre = require("hardhat");
 const { WebGateway } = require("./src/web.js")
 const { ImageEditor } = require("./src/imageEditor.js")
-const { logger } = require("./src/logger.js")
+const { logger } = require("./src/logger.js");
+const { add } = require("winston");
 NEXT_RETRY_DELAY = 1000 * 60 * 5 // 5 minutes
 MAX_NUM_OF_DOWNLOAD_ATTEMPTS = 5
 STATUSCODES_ALLOWING_RETRY = [ 408, 502, 503, 504, 429 ]
@@ -123,21 +124,29 @@ async function main() {
     let [ updatesCount , updateError ] = await db.appendImagesToAds(ads)
     await db.close()
     logger.info(`Updated ${updatesCount} images in the db`)
-}
 
 
-/*
 
-// construct adsBigBic
-// if no image is present will fill with black and add error to block data
-gotUnprocessedAds = db.gotUnprocessedAds()
-if (gotUnprocessedAds || adsGotChanges) {
-    ads = db.getAds()  // get all ads(or only previous snapshot)
-    adsBigPic = renderer.render(ads)
-    adsBigPicUrl = uploader.uploadBigAds(adsBigPic.image)
-    adsBigPic.snapshot.adsBigPicUrl = bigAdsUrl 
-    db.saveBigAdsSnapshot(adsBigPic) // also saves id
-    db.saveLatestProcessedAdsId(adsBigPic.latestProcessedAdsId)
+    // CONSTRUCT ADS BIG BIC
+
+    const [ latestSnapshot, snapshotError ] = db.getLatestAdsSnapshot()
+    const newAdsSnapshot = latestSnapshot ? new AdsSnapshot(latestSnapshot) : null
+    const [ addsToBeAdded, adsError ] = newAdsSnapshot ? db.getAdsFrom(newAdsSnapshot.getLatestAdID()) : [ [], null ]  // db cursor
+    for (ad in addsToBeAdded) {
+        newAdsSnapshot.overlay(ad) // will build picture and links map
+    }
+
+    // upload new bigPic
+    const [ adsBigPicUrl, uploadError ] = [null, null]
+    if ( newAdsSnapshot.gotNewOverlays() ) {
+        ;[ adsBigPicUrl, uploadError ] = uploader.uploadAdsSnapshotPic(newAdsSnapshot.getUpdatedBigPic()) // null or url
+    }
+
+    // save snapshot to db
+    if ( adsBigPicUrl ) {
+        newAdsSnapshot.addBigPicUrl(adsBigPicUrl)
+        db.saveAdsSnapshot(newAdsSnapshot.exportFields())
+    }
 }
 
 // publish ads snapshot to site
@@ -147,8 +156,6 @@ if (snapshot) {
     snapshot.published = true
     db.write.snapshot
 }
-
-*/
 
 
 main()
