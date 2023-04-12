@@ -127,13 +127,18 @@ async function main() {
 
 
 
+
     // CONSTRUCT ADS BIG BIC
 
-    const [ latestSnapshot, snapshotError ] = db.getLatestAdsSnapshot()
-    const newAdsSnapshot = latestSnapshot ? new AdsSnapshot(latestSnapshot) : null
+    const [ latestSnapshot, snapshotError ] = db.getLatestAdsSnapshot() // returns {} if no snapshots are present
+    snapshotError ? logger.error(snapshotError) : {}
+    const newAdsSnapshot = !snapshotError ? new AdsSnapshot(latestSnapshot) : null
     const [ addsToBeAdded, adsError ] = newAdsSnapshot ? db.getAdsFrom(newAdsSnapshot.getLatestAdID()) : [ [], null ]  // db cursor
+    adsError ? logger.error(adsError) : {}
+
+    // overlay new ads
     for (ad in addsToBeAdded) {
-        newAdsSnapshot.overlay(ad) // will build picture and links map
+        await newAdsSnapshot.overlay(ad) // will build picture and links map
     }
 
     // upload new bigPic
