@@ -17,32 +17,48 @@ class AdsSnapshot {
 
     // construct from the same fields as in export (retrieved from db)
     // expects an empty object if no snapshots exist yet
-    constructor(previousSnapshot) {
-        if (Object.hasOwn(previousSnapshot, "latestAdId")) {
-            this.previousSnapshot = previousSnapshot
-        } else {
-            // spec for the snapshot record
-            this.previousSnapshot = {
+    constructor(previousSnapshot, options) {
+        this.defaultBgPath = options.defaultBgPath
+        this.overlays = []
+        // spec for the snapshot record
+        let emptySnapshot = {
                 latestAdId: 0, // this is also unique ID of the snapshot
                 bigPicUrl: null,
                 bigPic: null,
                 linksMapJSON: []
             }
+        this.newSnapshot = emptySnapshot
+        if (Object.hasOwn(previousSnapshot, "latestAdId")) {
+            this.previousSnapshot = previousSnapshot
+        } else {
+            this.previousSnapshot = emptySnapshot
         }
     }
 
     // overlays an ad over given snapshot
+    // is collecting new ads into buffer array for subsequent merge
     async overlay(ad) {
-        let ie = new ImageEditor({})
-        if (!this.previousSnapshot.bigPic) {
-            this.previousSnapshot.bigPic = ie.createBackgroundImage()
-        }
-        // fields for the snapshot record
-        this.newSnapshot.bigPic = ie.overlayAd(this.previousSnapshot.bigPic, ad)
+        this.overlays.push({ 
+            input: ad.imageForPixelMap,
+            top: (ad.fromY - 1) * 10,
+            left: (ad.fromX - 1) * 10
+        })
         this.newSnapshot.linksMapJSON = buildLinksMapJSON(this.previousSnapshot.linksMapJSON, ad)
         this.newSnapshot.latestAdId = ad.ID
-        // flag for new overlays
-        this.gotOverlays = true
+    }
+
+    // merge all images to one
+    async merge(){
+        if (!this.newSnapshot.bigPic) {
+            let ie = new ImageEditor({})
+            if (!this.previousSnapshot.bigPic) {
+                this.previousSnapshot.bigPic = await ie.createBackgroundImage(this.defaultBgPath)
+            }
+            this.newSnapshot.bigPic = await ie.overlayAd(
+                this.previousSnapshot.bigPic,
+                this.overlays
+                )
+        }
     }
 
     addBigPicUrl(url) {
@@ -54,15 +70,17 @@ class AdsSnapshot {
     }
 
     gotNewOverlays() {
-        return this.gotOverlays
+        return (this.overlays.length > 0)
     }
 
-    getUpdatedBigPic() {
+    async getUpdatedBigPic() {
+        await this.merge()
         return this.newSnapshot.bigPic
     }
 
     // these fields will go into db
-    exportFields() {
+    async exportFields() {
+        await this.merge()
         return this.newSnapshot
     }
 }

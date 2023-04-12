@@ -12,6 +12,7 @@ THUMBNAIL_PARAMS = {
     width: 400,
     height: 400
 }
+DEFAULT_BG_PATH = "./static/bg.png"
 
 function getDimensions(adRecord) {
     return {
@@ -129,13 +130,17 @@ async function main() {
 
 
     // CONSTRUCT ADS BIG BIC
+    // TODO retrieve latest snapshot taking into account images that were
+    // uploaded after retries
 
     const [ latestSnapshot, snapshotError ] = db.getLatestAdsSnapshot() // returns {} if no snapshots are present
     snapshotError ? logger.error(snapshotError) : {}
-    const newAdsSnapshot = !snapshotError ? new AdsSnapshot(latestSnapshot) : null
+    const snapshotOptions = { defaultBgPath: DEFAULT_BG_PATH }
+    const newAdsSnapshot = !snapshotError ? new AdsSnapshot(latestSnapshot, snapshotOptions) : null
     const [ addsToBeAdded, adsError ] = newAdsSnapshot ? db.getAdsFrom(newAdsSnapshot.getLatestAdID()) : [ [], null ]  // db cursor
     adsError ? logger.error(adsError) : {}
 
+    // TODO limit max batch for adsTobeadded
     // overlay new ads
     for (ad in addsToBeAdded) {
         await newAdsSnapshot.overlay(ad) // will build picture and links map
@@ -144,13 +149,13 @@ async function main() {
     // upload new bigPic
     const [ adsBigPicUrl, uploadError ] = [null, null]
     if ( newAdsSnapshot.gotNewOverlays() ) {
-        ;[ adsBigPicUrl, uploadError ] = uploader.uploadAdsSnapshotPic(newAdsSnapshot.getUpdatedBigPic()) // null or url
+        ;[ adsBigPicUrl, uploadError ] = uploader.uploadAdsSnapshotPic(await newAdsSnapshot.getUpdatedBigPic()) // null or url
     }
 
     // save snapshot to db
     if ( adsBigPicUrl ) {
         newAdsSnapshot.addBigPicUrl(adsBigPicUrl)
-        db.saveAdsSnapshot(newAdsSnapshot.exportFields())
+        db.saveAdsSnapshot(await newAdsSnapshot.exportFields())
     }
 }
 

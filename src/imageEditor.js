@@ -20,6 +20,17 @@ class ImageEditor {
             return [null, err]
           }
     }
+
+    async overlayAds(background, ads) {
+      return await sharp(background)
+        .composite(ads)
+        .toBuffer();
+    }
+
+    async createBackgroundImage(source){
+      return await sharp(source)
+        .toBuffer();
+    }
 }
 
 module.exports = {
