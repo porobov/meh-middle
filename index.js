@@ -3,6 +3,7 @@ const { DB } = require("./src/db.js")
 const hre = require("hardhat");
 const { WebGateway } = require("./src/web.js")
 const { ImageEditor } = require("./src/imageEditor.js")
+const { AdsSnapshot } = require("./src/snapshots.js")
 const { logger } = require("./src/logger.js");
 const { add } = require("winston");
 NEXT_RETRY_DELAY = 1000 * 60 * 5 // 5 minutes
@@ -133,12 +134,19 @@ async function main() {
     // TODO retrieve latest snapshot taking into account images that were
     // uploaded after retries
 
-    const [ latestSnapshot, snapshotError ] = db.getLatestAdsSnapshot() // returns {} if no snapshots are present
-    snapshotError ? logger.error(snapshotError) : {}
+    // getting earliest ad with 
+
+    const latestSnapshot = db.getLatestAdsSnapshot() // returns {} if no snapshots are present
     const snapshotOptions = { defaultBgPath: DEFAULT_BG_PATH }
     const newAdsSnapshot = !snapshotError ? new AdsSnapshot(latestSnapshot, snapshotOptions) : null
-    const [ addsToBeAdded, adsError ] = newAdsSnapshot ? db.getAdsFrom(newAdsSnapshot.getLatestAdID()) : [ [], null ]  // db cursor
-    adsError ? logger.error(adsError) : {}
+    // checking if got timestamp higher than of the snapshot, but with lower ID
+    const laggards = db.getLaggards(
+        newAdsSnapshot.getLatestAdID(),
+        newAdsSnapshot.getLatestAdDownloadTimestamp())
+    // retrieve all ids like that and find lowest
+    // if so find an older snapshot
+        
+    const addsToBeAdded = db.getAdsFrom(newAdsSnapshot.getLatestAdID())
 
     // TODO limit max batch for adsTobeadded
     // overlay new ads
