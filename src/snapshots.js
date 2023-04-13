@@ -38,6 +38,8 @@ class AdsSnapshot {
     // overlays an ad over given snapshot
     // is collecting new ads into buffer array for subsequent merge
     async overlay(ad) {
+        if (this.mergedBigPic) {
+            throw new Error("Cannot overlay - merged big pic already")}
         this.overlays.push({ 
             input: ad.imageForPixelMap,
             top: (ad.fromY - 1) * 10,
@@ -48,17 +50,19 @@ class AdsSnapshot {
     }
 
     // merge all images to one
-    async merge(){
-        if (!this.newSnapshot.bigPic) {
+    async getMergedBigPic(){
+        if (!this.mergedBigPic) {
             let ie = new ImageEditor({})
             if (!this.previousSnapshot.bigPic) {
-                this.previousSnapshot.bigPic = await ie.createBackgroundImage(this.defaultBgPath)
+                this.previousSnapshot.bigPic =
+                    await ie.createBackgroundImage(this.defaultBgPath)
             }
-            this.newSnapshot.bigPic = await ie.overlayAd(
+            this.mergedBigPic = await ie.overlayAd(
                 this.previousSnapshot.bigPic,
                 this.overlays
-                )
+            )
         }
+        return this.mergedBigPic
     }
 
     addBigPicUrl(url) {
@@ -74,13 +78,12 @@ class AdsSnapshot {
     }
 
     async getUpdatedBigPic() {
-        await this.merge()
-        return this.newSnapshot.bigPic
+        return await this.getMergedBigPic()
     }
 
     // these fields will go into db
     async exportFields() {
-        await this.merge()
+        this.newSnapshot.bigPic = await this.getMergedBigPic()
         return this.newSnapshot
     }
 }
