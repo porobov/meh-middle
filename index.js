@@ -133,29 +133,29 @@ async function main() {
     // getting earliest ad snapshot 
     const snapshotOptions = { defaultBgPath: DEFAULT_BG_PATH }
     const adsSnapshot = new AdsSnapshot(
-        db.getSnapshotBeforeID('infinity'), // returns {} if no snapshots are present
+        await db.getSnapshotBeforeID('infinity'), // returns {} if no snapshots are present
         snapshotOptions  // options
         )
 
     // checking if got timestamp higher than of the snapshot, but with lower ID
     // if so find an older snapshot
     // (relevant to images that were uploaded after retries)
-    const earliestID = db.getEarliestAdIdAfterTimestamp(
+    const earliestID = await db.getEarliestAdIdAfterTimestamp(
         adsSnapshot.getLatestAdDownloadTimestamp())
     if (earliestID < adsSnapshot.getLatestAdID()) { 
         adsSnapshot = new AdsSnapshot(
-            db.getSnapshotBeforeID(earliestID),
+            await db.getSnapshotBeforeID(earliestID),
             snapshotOptions)
     }
 
     // retrieve ads with higher ID, sorted by ID
     // (returns cursor)
-    const addsToBeAdded  = db.getAdsFromID(adsSnapshot.getLatestAdID())
+    const addsToBeAdded  = await db.getAdsFromID(adsSnapshot.getLatestAdID())
     for await (const ad of addsToBeAdded) {
-        await adsSnapshot.overlay(ad)  // overlay new ads
+        adsSnapshot.overlay(ad)  // overlay new ads
     }
     if ( adsSnapshot.gotOverlays() ) {
-        db.saveAdsSnapshot(await adsSnapshot.getMergedSnapshot())
+        await db.saveAdsSnapshot(await adsSnapshot.getMergedSnapshot())
     }
 
 
