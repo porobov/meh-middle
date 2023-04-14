@@ -128,42 +128,49 @@ async function main() {
     logger.info(`Updated ${updatesCount} images in the db`)
 
 
-
-
     // CONSTRUCT ADS BIG BIC
-    // TODO retrieve latest snapshot taking into account images that were
-    // uploaded after retries
 
-    // getting earliest ad with 
-
-    const latestSnapshot = db.getLatestAdsSnapshot() // returns {} if no snapshots are present
+    // getting earliest ad snapshot 
     const snapshotOptions = { defaultBgPath: DEFAULT_BG_PATH }
-    const newAdsSnapshot = !snapshotError ? new AdsSnapshot(latestSnapshot, snapshotOptions) : null
-    // checking if got timestamp higher than of the snapshot, but with lower ID
-    const laggards = db.getLaggards(
-        newAdsSnapshot.getLatestAdID(),
-        newAdsSnapshot.getLatestAdDownloadTimestamp())
-    // retrieve all ids like that and find lowest
-    // if so find an older snapshot
-        
-    const addsToBeAdded = db.getAdsFrom(newAdsSnapshot.getLatestAdID())
+    const adsSnapshot = new AdsSnapshot(
+        db.getSnapshotBeforeID('infinity'), // returns {} if no snapshots are present
+        snapshotOptions  // options
+        )
 
-    // TODO limit max batch for adsTobeadded
-    // overlay new ads
-    for (ad in addsToBeAdded) {
-        await newAdsSnapshot.overlay(ad) // will build picture and links map
+    // checking if got timestamp higher than of the snapshot, but with lower ID
+    // if so find an older snapshot
+    // (relevant to images that were uploaded after retries)
+    const earliestID = db.getEarliestAdIdAfterTimestamp(
+        adsSnapshot.getLatestAdDownloadTimestamp())
+    if (earliestID < adsSnapshot.getLatestAdID()) { 
+        adsSnapshot = new AdsSnapshot(
+            db.getSnapshotBeforeID(earliestID),
+            snapshotOptions)
     }
 
+    // retrieve ads with higher ID, sorted by ID
+    // (returns cursor)
+    const addsToBeAdded  = db.getAdsFromID(adsSnapshot.getLatestAdID())
+    for await (const ad of addsToBeAdded) {
+        await adsSnapshot.overlay(ad)  // overlay new ads
+    }
+    if ( adsSnapshot.gotOverlays() ) {
+        db.saveAdsSnapshot(await adsSnapshot.getMergedSnapshot())
+    }
+
+
+
+    // UPLOAD BIG PIC AND LINKS MAP
     // upload new bigPic
     const [ adsBigPicUrl, uploadError ] = [null, null]
-    if ( newAdsSnapshot.gotNewOverlays() ) {
-        ;[ adsBigPicUrl, uploadError ] = uploader.uploadAdsSnapshotPic(await newAdsSnapshot.getUpdatedBigPic()) // null or url
+    if ( adsSnapshot.gotOverlays() ) {
+        ;[ adsBigPicUrl, uploadError ] = uploader.uploadAdsSnapshotPic(await adsSnapshot.getMergedBigPic()) // null or url
     }
 
     // save snapshot to db
     if ( adsBigPicUrl ) {
-        newAdsSnapshot.addBigPicUrl(adsBigPicUrl)
-        db.saveAdsSnapshot(await newAdsSnapshot.exportFields())
+        // addNewBigPicUrl
+        adsSnapshot.addBigPicUrl(adsBigPicUrl)
     }
 }
 

@@ -73,16 +73,12 @@ class AdsSnapshot {
         return this.previousSnapshot.latestAdId
     }
 
-    gotNewOverlays() {
+    gotOverlays() {
         return (this.overlays.length > 0)
     }
 
-    async getUpdatedBigPic() {
-        return await this.getMergedBigPic()
-    }
-
     // these fields will go into db
-    async exportFields() {
+    async getMergedSnapshot() {
         this.newSnapshot.bigPic = await this.getMergedBigPic()
         return this.newSnapshot
     }
