@@ -24,7 +24,7 @@ class AdsSnapshot {
         let emptySnapshot = {
                 latestAdId: 0, // this is also unique ID of the snapshot
                 bigPicUrl: null,
-                bigPic: null,
+                bigPicBinary: null,
                 linksMapJSON: []
             }
         this.newSnapshot = emptySnapshot
@@ -33,6 +33,11 @@ class AdsSnapshot {
         } else {
             this.previousSnapshot = emptySnapshot
         }
+        this.latestAdId = this.previousSnapshot.latestAdId
+    }
+
+    getLatestAdID(){
+        return this.latestAdId
     }
 
     // overlays an ad over given snapshot
@@ -46,43 +51,34 @@ class AdsSnapshot {
             left: (ad.fromX - 1) * 10
         })
         this.newSnapshot.linksMapJSON = buildLinksMapJSON(this.previousSnapshot.linksMapJSON, ad)
-        this.newSnapshot.latestAdId = ad.ID
-    }
-
-    // merge all images to one
-    async getMergedBigPic(){
-        if (!this.mergedBigPic) {
-            let ie = new ImageEditor({})
-            if (!this.previousSnapshot.bigPic) {
-                this.previousSnapshot.bigPic =
-                    await ie.createBackgroundImage(this.defaultBgPath)
-            }
-            this.mergedBigPic = await ie.overlayAd(
-                this.previousSnapshot.bigPic,
-                this.overlays
-            )
-        }
-        return this.mergedBigPic
-    }
-
-    addBigPicUrl(url) {
-        this.newSnapshot.bigPicUrl = url
-    }
-
-    getLatestAdID(){
-        return this.previousSnapshot.latestAdId
+        this.latestAdId = ad.ID
     }
 
     gotOverlays() {
         return (this.overlays.length > 0)
     }
 
-    // these fields will go into db
-    async getMergedSnapshot() {
-        this.newSnapshot.bigPic = await this.getMergedBigPic()
-        return this.newSnapshot
+    // merge all images to one
+    async getMergedBigPic(){
+        if (!this.mergedBigPic) {
+            let ie = new ImageEditor({})
+            if (!this.previousSnapshot.bigPicBinary) {
+                this.previousSnapshot.bigPicBinary =
+                    await ie.createBackgroundImage(this.defaultBgPath)
+            }
+            this.mergedBigPic = await ie.overlayAd(
+                this.previousSnapshot.bigPicBinary,
+                this.overlays
+            )
+        }
+        return this.mergedBigPic
+    }
+
+    getLinksMapJSON() {
+        return this.newSnapshot.linksMapJSON
     }
 }
+
 module.exports = {
     AdsSnapshot,
   }

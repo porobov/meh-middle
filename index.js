@@ -154,33 +154,41 @@ async function main() {
     for await (const ad of addsToBeAdded) {
         adsSnapshot.overlay(ad)  // overlay new ads
     }
+    // save new snapshot to db
     if ( adsSnapshot.gotOverlays() ) {
-        await db.saveAdsSnapshot(await adsSnapshot.getMergedSnapshot())
+        const newSnapshot =  {
+            latestAdId: adsSnapshot.getLatestAdID(),
+            linksMapJSON: adsSnapshot.getLinksMapJSON(),
+            bigPicBinary: await adsSnapshot.getMergedBigPic()
+        }
+        await db.saveAdsSnapshot(newSnapshot)
     }
 
 
 
     // UPLOAD BIG PIC AND LINKS MAP
-    // upload new bigPic
-    const [ adsBigPicUrl, uploadError ] = [null, null]
-    if ( adsSnapshot.gotOverlays() ) {
-        ;[ adsBigPicUrl, uploadError ] = uploader.uploadAdsSnapshotPic(await adsSnapshot.getMergedBigPic()) // null or url
+    
+    const snapshot = await db.getSnapshotBeforeID('infinity')
+    const adsBigPicUrl = ""
+    if ( snapshot && snapshot.isServing == false ) {
+        ;[ adsBigPicUrl, uploadError ] = await uploader.uploadAdsSnapshotPic(snapshot.bigPicBinary)
     }
 
-    // save snapshot to db
+
+    // PREPARE AND PUBLISH SITE DATA
+
     if ( adsBigPicUrl ) {
-        // addNewBigPicUrl
-        adsSnapshot.addBigPicUrl(adsBigPicUrl)
+        const siteData = snapshot
+        siteData.adsBigPicUrl = adsBigPicUrl
+
+        const [isServing, pubErr ] = await uploader.publish(JSON.stringify(siteData))
+        snapshot.isServing = isServing
+        await db.updateSnapshot(snapshot)
     }
+
+    await db.close()
 }
 
-// publish ads snapshot to site
-snapshot = db.getLatestUnpublishedAdsSnapshot()
-if (snapshot) {
-    publisher.publish(snapshot)
-    snapshot.published = true
-    db.write.snapshot
-}
 
 
 main()
