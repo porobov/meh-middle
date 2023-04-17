@@ -14,6 +14,8 @@ THUMBNAIL_PARAMS = {
     height: 400
 }
 DEFAULT_BG_PATH = "./static/bg.png"
+const NEW_IMAGE_EVENT_NAME = "NewImage"
+const BUY_SELL_EVENT_NAME = "NewStatus"
 
 function getDimensions(adRecord) {
     return {
@@ -23,19 +25,20 @@ function getDimensions(adRecord) {
 }
 
 async function main() {
-    // get latest block
     let db = new DB(hre.config.dbConf)
     await db.connect()
-    let eventName = "NewImage"
-    let [ fromBlock, lbError ] = await db.getLatestBlockForEvent(eventName)
-    logger.info(`${eventName} event latest block in DB is ${fromBlock}`)
+    
+
+    // PREPARE DATA FOR ADS SNAPSHOT
+    
+    let [ fromBlock, lbError ] = await db.getLatestBlockForEvent(NEW_IMAGE_EVENT_NAME)
+    logger.info(`${NEW_IMAGE_EVENT_NAME} event latest block in DB is ${fromBlock}`)
     
     // get events
     let contractName = "MillionEther"
     let contractAddress = "0x15dbdB25f870f21eaf9105e68e249E0426DaE916"
     let contract = new MillionEther(contractName, contractAddress)
-    // logger.info(`Checking ${eventName} event starting from block ${fromBlock}`)
-    let newEvents = await contract.getEvents(eventName, fromBlock)
+    let newEvents = await contract.getEvents(NEW_IMAGE_EVENT_NAME, fromBlock)
     logger.info(`Received ${newEvents.decodedEvents.length} new events till block ${newEvents.blockNumber}`)
 
     // save new events to db
@@ -45,9 +48,9 @@ async function main() {
     }
 
     // save block number for event    
-    let [savedSuccessfully, saveError] = await db.saveLatestBlockForEvent(eventName, newEvents.blockNumber)
+    let [savedSuccessfully, saveError] = await db.saveLatestBlockForEvent(NEW_IMAGE_EVENT_NAME, newEvents.blockNumber)
     if (savedSuccessfully) {
-        logger.info(`Saved block ${newEvents.blockNumber} for ${eventName} event to db`)
+        logger.info(`Saved block ${newEvents.blockNumber} for ${NEW_IMAGE_EVENT_NAME} event to db`)
     }
 
     // get ads with no images (not downloaded)
@@ -128,12 +131,13 @@ async function main() {
     logger.info(`Updated ${updatesCount} images in the db`)
 
 
-    // CONSTRUCT ADS BIG BIC
+    // CONSTRUCT ADS SNAPSHOT
+    // will do noting if no new ads are present
 
     // getting earliest ad snapshot 
     const snapshotOptions = { defaultBgPath: DEFAULT_BG_PATH }
     const adsSnapshot = new AdsSnapshot(
-        await db.getSnapshotBeforeID('infinity'), // returns {} if no snapshots are present
+        await db.getAdsSnapshotBeforeID('infinity'), // returns {} if no snapshots are present
         snapshotOptions  // options
         )
 
@@ -144,7 +148,7 @@ async function main() {
         adsSnapshot.getLatestAdDownloadTimestamp())
     if (earliestID < adsSnapshot.getLatestAdID()) { 
         adsSnapshot = new AdsSnapshot(
-            await db.getSnapshotBeforeID(earliestID),
+            await db.getAdsSnapshotBeforeID(earliestID),
             snapshotOptions)
     }
 
@@ -154,37 +158,36 @@ async function main() {
     for await (const ad of addsToBeAdded) {
         adsSnapshot.overlay(ad)  // overlay new ads
     }
-    // save new snapshot to db
+    // save new snapshot to db (saving only fully processed snapshots)
     if ( adsSnapshot.gotOverlays() ) {
+        // upload big pic and links map
+        const bigPicBinary = await adsSnapshot.getMergedBigPic() 
+        const adsBigPicUrl = ""
+        ;[ adsBigPicUrl, uploadError ] = await uploader.uploadAdsSnapshotPic(bigPicBinary)
         const newSnapshot =  {
             latestAdId: adsSnapshot.getLatestAdID(),
             linksMapJSON: adsSnapshot.getLinksMapJSON(),
-            bigPicBinary: await adsSnapshot.getMergedBigPic()
+            bigPicBinary: bigPicBinary,
+            adsBigPicUrl: adsBigPicUrl
         }
         await db.saveAdsSnapshot(newSnapshot)
     }
 
 
-
-    // UPLOAD BIG PIC AND LINKS MAP
     
-    const snapshot = await db.getSnapshotBeforeID('infinity')
-    const adsBigPicUrl = ""
-    if ( snapshot && snapshot.isServing == false ) {
-        ;[ adsBigPicUrl, uploadError ] = await uploader.uploadAdsSnapshotPic(snapshot.bigPicBinary)
+    // PUBLISH SITE DATA
+    // pushes data on every cycle
+    const latestAdsSnapshot = await db.getAdsSnapshotBeforeID('infinity')
+    const latestBuySellSnapshot = await db.getBuySellSnapshotBeforeID('infinity')
+    const [ newImageLatestBlock, niError ] = await db.getLatestBlockForEvent(NEW_IMAGE_EVENT_NAME)
+    const [ buySellLatestCheckedBlock, bsErr] = await db.getLatestBlockForEvent(BUY_SELL_EVENT_NAME)
+    const siteData = {
+        adsSnapshot: latestAdsSnapshot,
+        buySellSnapshot: latestBuySellSnapshot,
+        newImageLatestBlock: newImageLatestBlock,
+        buySellLatestCheckedBlock: buySellLatestCheckedBlock
     }
-
-
-    // PREPARE AND PUBLISH SITE DATA
-
-    if ( adsBigPicUrl ) {
-        const siteData = snapshot
-        siteData.adsBigPicUrl = adsBigPicUrl
-
-        const [isServing, pubErr ] = await uploader.publish(JSON.stringify(siteData))
-        snapshot.isServing = isServing
-        await db.updateSnapshot(snapshot)
-    }
+    const [isServing, pubErr ] = await uploader.publish(JSON.stringify(siteData))
 
     await db.close()
 }
