@@ -16,12 +16,6 @@ DEFAULT_BG_PATH = "./static/bg.png"
 const NEW_IMAGE_EVENT_NAME = "NewImage"
 const BUY_SELL_EVENT_NAME = "NewStatus"
 
-function getDimensions(adRecord) {
-    return {
-        width: (1 + adRecord.toX - adRecord.fromX),
-        height: (1 + adRecord.toY - adRecord.fromY)
-    }
-}
 
 // analyzes error of image download
 function getRetryParams(error, numOfTries) {
@@ -99,28 +93,13 @@ async function main() {
 
         // resize images
         if (ad.fullImageBinary) {
-            let ie = new ImageEditor({})
+            let ie = new ImageEditor({ thumbnailParams: THUMBNAIL_PARAMS })
             // image for thumbnail will fit configured size
-            let [ imageBuffer, error ] = await ie.fitInside(
-                ad.fullImageBinary,
-                THUMBNAIL_PARAMS.width,
-                THUMBNAIL_PARAMS.height,
-                'inside',
-                true)
-            ad.updates.imageThumb = imageBuffer // null if error
+            ;[ ad.updates.imageThumb, error ] = await ie.getImageThumbBinary(ad) 
             // image for pixelMap will resize ignoring aspect ratio
             // will also enlarge image if too small
-            ad.updates.width = getDimensions(ad).width
-            ad.updates.height = getDimensions(ad).height
-            ;[ imageBuffer, error ] = await ie.fitInside(
-                ad.fullImageBinary,
-                ad.updates.width,
-                ad.updates.height,
-                'fill',
-                false)
-            ad.updates.imageForPixelMap = imageBuffer // null if error
+            ;[ ad.updates.imageForPixelMap, error ] = await ie.getImageForPixelMap(ad)
             logger.info(`Created image for pixel map`)
-
             // single write of error for both resizes
             if ( error ) {
                 ad.updates.error = JSON.stringify(error, Object.getOwnPropertyNames(error))
@@ -130,7 +109,6 @@ async function main() {
         }
     }
     let [ updatesCount , updateError ] = await db.appendImagesToAds(ads)
-    await db.close()
     logger.info(`Updated ${updatesCount} images in the db`)
 
 
