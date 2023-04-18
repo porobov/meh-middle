@@ -23,6 +23,30 @@ function getDimensions(adRecord) {
     }
 }
 
+// analyzes error of image download
+function getRetryParams(error, numOfTries) {
+    const response = {}
+    if (Object.hasOwn(error, 'response') 
+        && Object.hasOwn(error.response, 'status')
+        && STATUSCODES_ALLOWING_RETRY.includes(error.response.status)
+    ) {
+        // try later for the errors above
+        const newNumOfTries = numOfTries + 1
+        response.numOfTries = newNumOfTries
+        response.nextTryTimestamp = Date.now() + NEXT_RETRY_DELAY * 2 ** (newNumOfTries - 1)
+        // stop trying to download
+        if (newNumOfTries >= MAX_NUM_OF_DOWNLOAD_ATTEMPTS) {
+            response.failedToDownLoad = true
+        }
+        logger.info(`Could not download (status code: ${error.response.status}). Will try later. Attempts: ${ newNumOfTries }`)
+    } else {
+        // stop downloading attempts if received this flag
+        response.failedToDownLoad = true
+        logger.info(`Failed to download`) 
+    }
+    return response
+}
+
 async function main() {
     let db = new DB(hre.config.dbConf)
     await db.connect()
@@ -68,25 +92,9 @@ async function main() {
             ad.updates.imageExtension = downloadResult.extension
             logger.info(`Downloaded ${downloadResult.extension} image`)
         } else {
-            if (Object.hasOwn(error, 'response') 
-                && Object.hasOwn(error.response, 'status')
-                && STATUSCODES_ALLOWING_RETRY.includes(error.response.status)
-            ) {
-                // try later for the errors above
-                let numOfTries = ad.numOfTries + 1
-                ad.updates.numOfTries = numOfTries
-                ad.updates.nextTryTimestamp = Date.now() + NEXT_RETRY_DELAY * 2 ** (numOfTries - 1)
-                // stop trying to download
-                if (ad.numOfTries >= MAX_NUM_OF_DOWNLOAD_ATTEMPTS) {
-                    ad.updates.failedToDownLoad = true
-                }
-                logger.info(`Could not download (status code: ${error.response.status}). Will try later. Attempts: ${numOfTries}`)
-            } else {
-                // stop downloading attempts if received this flag
-                ad.updates.failedToDownLoad = true
-                logger.info(`Failed to download`) 
-            }
-        ad.updates.error = JSON.stringify(error) // , Object.getOwnPropertyNames(error))
+            // if failed to download, decide if we want to retry later
+            Object.assign(ad.updates, getRetryParams(error, ad.numOfTries))
+            ad.updates.error = JSON.stringify(error) // , Object.getOwnPropertyNames(error))
         }
 
         // resize images
