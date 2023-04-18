@@ -5,7 +5,6 @@ const { WebGateway } = require("./src/web.js")
 const { ImageEditor } = require("./src/imageEditor.js")
 const { AdsSnapshot } = require("./src/snapshots.js")
 const { logger } = require("./src/logger.js");
-const { add } = require("winston");
 NEXT_RETRY_DELAY = 1000 * 60 * 5 // 5 minutes
 MAX_NUM_OF_DOWNLOAD_ATTEMPTS = 5
 STATUSCODES_ALLOWING_RETRY = [ 408, 502, 503, 504, 429 ]
@@ -74,11 +73,7 @@ async function main() {
                 && STATUSCODES_ALLOWING_RETRY.includes(error.response.status)
             ) {
                 // try later for the errors above
-                let numOfTries = 0
-                if(Object.hasOwn(ad, "numOfTries") && ad.numOfTries >= 0) {
-                    numOfTries = ad.numOfTries
-                }
-                numOfTries ++
+                let numOfTries = ad.numOfTries + 1
                 ad.updates.numOfTries = numOfTries
                 ad.updates.nextTryTimestamp = Date.now() + NEXT_RETRY_DELAY * 2 ** (numOfTries - 1)
                 // stop trying to download
@@ -179,13 +174,13 @@ async function main() {
     // pushes data on every cycle
     const latestAdsSnapshot = await db.getAdsSnapshotBeforeID('infinity')
     const latestBuySellSnapshot = await db.getBuySellSnapshotBeforeID('infinity')
-    const [ newImageLatestBlock, niError ] = await db.getLatestBlockForEvent(NEW_IMAGE_EVENT_NAME)
     const [ buySellLatestCheckedBlock, bsErr] = await db.getLatestBlockForEvent(BUY_SELL_EVENT_NAME)
     const siteData = {
         adsSnapshot: latestAdsSnapshot,
         buySellSnapshot: latestBuySellSnapshot,
-        newImageLatestBlock: newImageLatestBlock,
-        buySellLatestCheckedBlock: buySellLatestCheckedBlock
+        newImageLatestCheckedBlock: newEvents.blockNumber,
+        buySellLatestCheckedBlock: buySellLatestCheckedBlock,
+        mehContractAddress: contractAddress,
     }
     const [isServing, pubErr ] = await uploader.publish(JSON.stringify(siteData))
 

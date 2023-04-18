@@ -22,7 +22,8 @@ class MillionEther {
         toY: ev.args.toY > ev.args.fromY ? ev.args.toY : ev.args.fromY,
         adText: ev.args.adText,
         adUrl: ev.args.adUrl,
-        imageSourceUrl: ev.args.imageSourceUrl
+        imageSourceUrl: ev.args.imageSourceUrl,
+        numOfTries: 0,  // num of download tries
       }
     })
     return {
