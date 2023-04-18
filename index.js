@@ -41,10 +41,17 @@ function getRetryParams(error, numOfTries) {
     return response
 }
 
+
+
 async function main() {
+    let contractName = "MillionEther"
+    let contractAddress = "0x15dbdB25f870f21eaf9105e68e249E0426DaE916"
+    let contract = new MillionEther(contractName, contractAddress)
     let db = new DB(hre.config.dbConf)
     await db.connect()
     
+
+
 
     // PREPARE DATA FOR ADS SNAPSHOT
     
@@ -52,9 +59,6 @@ async function main() {
     logger.info(`${NEW_IMAGE_EVENT_NAME} event latest block in DB is ${fromBlock}`)
     
     // get events
-    let contractName = "MillionEther"
-    let contractAddress = "0x15dbdB25f870f21eaf9105e68e249E0426DaE916"
-    let contract = new MillionEther(contractName, contractAddress)
     let newEvents = await contract.getEvents(NEW_IMAGE_EVENT_NAME, fromBlock)
     logger.info(`Received ${newEvents.decodedEvents.length} new events till block ${newEvents.blockNumber}`)
 
@@ -80,10 +84,12 @@ async function main() {
         ad.updates = {}
         logger.info(`Downloading image for ad ID ${ad.ID} from ${ad.imageSourceUrl}...`)
         let [ downloadResult, error ] = await wg.downloadImage(ad.imageSourceUrl)
+        const fullImageBinary = null
         if (downloadResult) { 
             // full image binary is a temporary value. It shouldn't be save to db
-            ad.fullImageBinary = downloadResult.binary
+            fullImageBinary = downloadResult.binary
             ad.updates.imageExtension = downloadResult.extension
+            ad.updates.downloadTimestamp = Date.now()
             logger.info(`Downloaded ${downloadResult.extension} image`)
         } else {
             // if failed to download, decide if we want to retry later
@@ -92,7 +98,7 @@ async function main() {
         }
 
         // resize images
-        if (ad.fullImageBinary) {
+        if ( fullImageBinary ) {
             let ie = new ImageEditor({ thumbnailParams: THUMBNAIL_PARAMS })
             // image for thumbnail will fit configured size
             ;[ ad.updates.imageThumb, error ] = await ie.getImageThumbBinary(ad) 
@@ -105,11 +111,12 @@ async function main() {
                 ad.updates.error = JSON.stringify(error, Object.getOwnPropertyNames(error))
             }
             // clear full image binary
-            ad.fullImageBinary = ""
         }
     }
     let [ updatesCount , updateError ] = await db.appendImagesToAds(ads)
     logger.info(`Updated ${updatesCount} images in the db`)
+
+
 
 
     // CONSTRUCT ADS SNAPSHOT
