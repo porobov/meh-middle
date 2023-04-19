@@ -54,7 +54,7 @@ async function main() {
 
     // DOWNLOAD EVENTS
 
-    // NewImages
+    // NEWIMAGES
 
     let [ fromBlock, lbError ] = await db.getLatestBlockForEvent(NEW_IMAGE_EVENT_NAME)
     logger.info(`${NEW_IMAGE_EVENT_NAME} event latest block in DB is ${fromBlock}`)
@@ -74,7 +74,7 @@ async function main() {
         adText: ev.adText,
         adUrl: ev.adUrl,
         imageSourceUrl: ev.imageSourceUrl,
-        numOfTries: 0,  // num of download tries
+        numOfTries: 0,  // num of download tries for ad image
       }
     })
 
@@ -221,12 +221,33 @@ async function main() {
 
     // CONSTRUCT BUY SELL SNAPSHOT 
 
+    const buySellSnapshot = new BuySellSnapshot(
+        await db.getLatestBuySellSnapshot(), // returns {} if no snapshots are present
+        )
+
+    // retrieve events with higher ID, sorted  by ID
+    // (returns cursor)
+    const transactionsToBeAdded = 
+        await db.getTransactionsFromID(buySellSnapshot.getLatestTransactionID())
+    for await (const buySellTx of transactionsToBeAdded) {
+        buySellSnapshot.overlay(buySellTx)  // overlay new ads
+    }
+    // save new snapshot to db (saving only fully processed snapshots)
+    if ( buySellSnapshot.gotOverlays() ) {
+        // upload big pic and links map
+        const newSnapshot =  {
+            latestBuySellId: buySellSnapshot.getLatestAdID(),
+            ownershipMapJSON: buySellSnapshot.getLinksMapJSON(),
+        }
+        await db.saveBuySellSnapshot(newSnapshot)
+    }
+    
+
 
     // PUBLISH SITE DATA
     // pushes data on every cycle
     const latestAdsSnapshot = await db.getAdsSnapshotBeforeID('infinity')
-    const latestBuySellSnapshot = await db.getBuySellSnapshotBeforeID('infinity')
-    const [ buySellLatestCheckedBlock, bsErr] = await db.getLatestBlockForEvent(BUY_SELL_EVENT_NAME)
+    const latestBuySellSnapshot = await db.getLatestBuySellSnapshot()
     const siteData = {
         adsSnapshot: latestAdsSnapshot,
         buySellSnapshot: latestBuySellSnapshot,
