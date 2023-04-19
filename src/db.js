@@ -48,6 +48,7 @@ class DB {
     }
 
     async saveLatestBlockForEvent(eventName, latestBlock) {
+      // TODO return only result, log error here
         var myquery = { state_id: this.tempStateId };
         var newvalues = { $set: { [this.recordNameForEvent(eventName)]: latestBlock} };
         const [ saveResult, err ] = await this.tryCatch(
@@ -61,6 +62,9 @@ class DB {
 
     async getLatestBlockForEvent(eventName) {
         var myquery = { state_id: this.tempStateId };
+        // TODO return null on error 
+        // TODO do not return error, just log it right here
+        // db ensures there's 0 value for the first run
         return await this.tryCatch(
           async () => (await this.state.findOne(myquery))[this.recordNameForEvent(eventName)])
     }
@@ -79,7 +83,8 @@ class DB {
     }
 
     // returns array
-    async addAds(decodedEvents) {
+    async addAdsEvents(decodedEvents) {
+      // TODO return only result. log error here
       const [res, err] = await this.tryCatch(
         async () => await this.ads.insertMany(decodedEvents, { ordered: false }))
       if (err && Object.hasOwn(err, 'code') && err.code === 11000) {

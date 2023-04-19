@@ -56,13 +56,12 @@ async function main() {
 
     // NEWIMAGES
 
-    let [ fromBlock, lbError ] = await db.getLatestBlockForEvent(NEW_IMAGE_EVENT_NAME)
-    logger.info(`${NEW_IMAGE_EVENT_NAME} event latest block in DB is ${fromBlock}`)
+    let fromBlock = await db.getLatestBlockForEvent(NEW_IMAGE_EVENT_NAME)
+    logger.info(`${ NEW_IMAGE_EVENT_NAME } event latest block in DB is ${fromBlock}`)
     
     // get events
     let newEvents = await contract.getEvents(NEW_IMAGE_EVENT_NAME, fromBlock)
     logger.info(`Received ${newEvents.decodedEvents.length} new events till block ${newEvents.blockNumber}`)
-
     const formatedEvents = newEvents.decodedEvents.map(ev => {
       return {
         ID: ev.ID.toNumber(),
@@ -78,30 +77,28 @@ async function main() {
       }
     })
 
-    // save new events to db
-    if (newEvents.decodedEvents.length > 0) {
-        const [ insertsCount, insertError ] = await db.addAds(formatedEvents)
+    // save new events and block number to db
+    if (formatedEvents.length > 0 &&  newEvents.blockNumber > 0 ) {
+        const insertsCount = await db.addAdsEvents(formatedEvents)
         logger.info(`${ insertsCount } new events were written to db`)
-    }
-
-    // save block number for event    
-    let [savedSuccessfully, saveError] = await db.saveLatestBlockForEvent(NEW_IMAGE_EVENT_NAME, newEvents.blockNumber)
-    if (savedSuccessfully) {
-        logger.info(`Saved block ${newEvents.blockNumber} for ${NEW_IMAGE_EVENT_NAME} event to db`)
+        let saved = await db.saveLatestBlockForEvent(NEW_IMAGE_EVENT_NAME, newEvents.blockNumber)
+        logger.info(`${ saved ? "Saved" : "FAILED TO SAVE" } block ${newEvents.blockNumber} for ${NEW_IMAGE_EVENT_NAME} event to db`)
+        }
     }
 
     // NEWSTATUS
 
     // get latest block for events
-    let [ buySellFromBlock, getBlockErr ] = await db.getLatestBlockForEvent(BUY_SELL_EVENT_NAME)
-    logger.info(`${BUY_SELL_EVENT_NAME} event latest block in DB is ${ buySellFromBlock }`)
+    let buySellFromBlock = await db.getLatestBlockForEvent(BUY_SELL_EVENT_NAME)
     
     // get events
-    // NewAreaStatus (uint ID, uint8 fromX, uint8 fromY, uint8 toX, uint8 toY, uint price);
-    let newBuySellEvents = await contract.getEvents(BUY_SELL_EVENT_NAME, buySellFromBlock)
-    logger.info(`Received ${newBuySellEvents.decodedEvents.length} new events till block ${newBuySellEvents.blockNumber}`)
+    let buySellEvents = await contract.getEvents(BUY_SELL_EVENT_NAME, buySellFromBlock)
+    logger.info(
+        `Received ${ buySellEvents.decodedEvents.length } 
+        new ${ BUY_SELL_EVENT_NAME } events 
+        from block ${ buySellFromBlock } to ${ buySellEvents.blockNumber }`)
 
-    const formatedBuySellEvents = newBuySellEvents.newBuySellEvents.map(ev => {
+    const formatedBuySellEvents = buySellEvents.decodedEvents.map(ev => {
         return {
           ID: ev.ID.toNumber(),
           // fixing smart contract bug. Coordinates may be mixed up
@@ -114,18 +111,13 @@ async function main() {
       })
 
     // save new events to db
-    if (formatedBuySellEvents > 0) {
-        const [ insertsCount, insertError ] = await db.addBuySellTransactions(formatedBuySellEvents)
+    if ( formatedBuySellEvents.length > 0 && buySellEvents.blockNumber > 0 ) {
+        const insertsCount = await db.addBuySellEvents(formatedBuySellEvents)
         logger.info(`${ insertsCount } new ${ BUY_SELL_EVENT_NAME } events were written to db`)
+        // save block number for event    
+        let saved = await db.saveLatestBlockForEvent(BUY_SELL_EVENT_NAME, buySellEvents.blockNumber)
+        logger.info(`${ saved ? "Saved" : "FAILED TO SAVE" } block ${buySellEvents.blockNumber} for ${ BUY_SELL_EVENT_NAME } event to db`)
     }
-    
-    // save block number for event    
-    let [buySellBloskSaved, buySellSaveError] = await db.saveLatestBlockForEvent(BUY_SELL_EVENT_NAME, newBuySellEvents.blockNumber)
-    if (buySellBloskSaved) {
-        logger.info(`Saved block ${newBuySellEvents.blockNumber} for ${ BUY_SELL_EVENT_NAME } event to db`)
-    }
-
-
 
 
 
@@ -252,7 +244,7 @@ async function main() {
         adsSnapshot: latestAdsSnapshot,
         buySellSnapshot: latestBuySellSnapshot,
         newImageLatestCheckedBlock: newEvents.blockNumber,
-        buySellLatestCheckedBlock: newBuySellEvents.blockNumber,
+        buySellLatestCheckedBlock: buySellEvents.blockNumber,
         mehContractAddress: contractAddress,
         chain: "mainnet",
         middleWareID: "SF",
