@@ -14,7 +14,7 @@ THUMBNAIL_PARAMS = {
 }
 DEFAULT_BG_PATH = "./static/bg.png"
 const NEW_IMAGE_EVENT_NAME = "NewImage"
-const BUY_SELL_EVENT_NAME = "NewStatus"
+const BUY_SELL_EVENT_NAME = "NewAreaStatus"
 
 
 // analyzes error of image download
@@ -52,9 +52,10 @@ async function main() {
     
 
 
+    // DOWNLOAD EVENTS
 
-    // PREPARE DATA FOR ADS SNAPSHOT
-    
+    // NewImages
+
     let [ fromBlock, lbError ] = await db.getLatestBlockForEvent(NEW_IMAGE_EVENT_NAME)
     logger.info(`${NEW_IMAGE_EVENT_NAME} event latest block in DB is ${fromBlock}`)
     
@@ -62,9 +63,24 @@ async function main() {
     let newEvents = await contract.getEvents(NEW_IMAGE_EVENT_NAME, fromBlock)
     logger.info(`Received ${newEvents.decodedEvents.length} new events till block ${newEvents.blockNumber}`)
 
+    const formatedEvents = newEvents.decodedEvents.map(ev => {
+      return {
+        ID: ev.ID.toNumber(),
+        // fixing smart contract bug. Coordinates may be mixed up
+        fromX: ev.fromX < ev.toX ? ev.fromX : ev.toX,
+        fromY: ev.fromY < ev.toY ? ev.fromY : ev.toY,
+        toX: ev.toX > ev.fromX ? ev.toX : ev.fromX,
+        toY: ev.toY > ev.fromY ? ev.toY : ev.fromY,
+        adText: ev.adText,
+        adUrl: ev.adUrl,
+        imageSourceUrl: ev.imageSourceUrl,
+        numOfTries: 0,  // num of download tries
+      }
+    })
+
     // save new events to db
     if (newEvents.decodedEvents.length > 0) {
-        const [ insertsCount, insertError ] = await db.addAds(newEvents.decodedEvents)
+        const [ insertsCount, insertError ] = await db.addAds(formatedEvents)
         logger.info(`${ insertsCount } new events were written to db`)
     }
 
@@ -73,6 +89,48 @@ async function main() {
     if (savedSuccessfully) {
         logger.info(`Saved block ${newEvents.blockNumber} for ${NEW_IMAGE_EVENT_NAME} event to db`)
     }
+
+    // NEWSTATUS
+
+    // get latest block for events
+    let [ buySellFromBlock, getBlockErr ] = await db.getLatestBlockForEvent(BUY_SELL_EVENT_NAME)
+    logger.info(`${BUY_SELL_EVENT_NAME} event latest block in DB is ${ buySellFromBlock }`)
+    
+    // get events
+    // NewAreaStatus (uint ID, uint8 fromX, uint8 fromY, uint8 toX, uint8 toY, uint price);
+    let newBuySellEvents = await contract.getEvents(BUY_SELL_EVENT_NAME, buySellFromBlock)
+    logger.info(`Received ${newBuySellEvents.decodedEvents.length} new events till block ${newBuySellEvents.blockNumber}`)
+
+    const formatedBuySellEvents = newBuySellEvents.newBuySellEvents.map(ev => {
+        return {
+          ID: ev.ID.toNumber(),
+          // fixing smart contract bug. Coordinates may be mixed up
+          fromX: ev.fromX < ev.toX ? ev.fromX : ev.toX,
+          fromY: ev.fromY < ev.toY ? ev.fromY : ev.toY,
+          toX: ev.toX > ev.fromX ? ev.toX : ev.fromX,
+          toY: ev.toY > ev.fromY ? ev.toY : ev.fromY,
+          price: ev.price.toString() // toString here, because values can be too bog for DB
+        }
+      })
+
+    // save new events to db
+    if (formatedBuySellEvents > 0) {
+        const [ insertsCount, insertError ] = await db.addBuySellTransactions(formatedBuySellEvents)
+        logger.info(`${ insertsCount } new ${ BUY_SELL_EVENT_NAME } events were written to db`)
+    }
+    
+    // save block number for event    
+    let [buySellBloskSaved, buySellSaveError] = await db.saveLatestBlockForEvent(BUY_SELL_EVENT_NAME, newBuySellEvents.blockNumber)
+    if (buySellBloskSaved) {
+        logger.info(`Saved block ${newBuySellEvents.blockNumber} for ${ BUY_SELL_EVENT_NAME } event to db`)
+    }
+
+
+
+
+
+
+    // PREPARE DATA FOR ADS SNAPSHOT
 
     // get ads with no images (not downloaded)
     let [ ads, adsLoadError ] = await db.getAdsNoImages()
@@ -110,7 +168,6 @@ async function main() {
             if ( error ) {
                 ad.updates.error = JSON.stringify(error, Object.getOwnPropertyNames(error))
             }
-            // clear full image binary
         }
     }
     let [ updatesCount , updateError ] = await db.appendImagesToAds(ads)
@@ -140,7 +197,7 @@ async function main() {
             snapshotOptions)
     }
 
-    // retrieve ads with higher ID, sorted by ID
+    // retrieve ads with higher ID, sorted  by ID
     // (returns cursor)
     const addsToBeAdded  = await db.getAdsFromID(adsSnapshot.getLatestAdID())
     for await (const ad of addsToBeAdded) {
@@ -162,7 +219,9 @@ async function main() {
     }
 
 
-    
+    // CONSTRUCT BUY SELL SNAPSHOT 
+
+
     // PUBLISH SITE DATA
     // pushes data on every cycle
     const latestAdsSnapshot = await db.getAdsSnapshotBeforeID('infinity')
@@ -172,8 +231,11 @@ async function main() {
         adsSnapshot: latestAdsSnapshot,
         buySellSnapshot: latestBuySellSnapshot,
         newImageLatestCheckedBlock: newEvents.blockNumber,
-        buySellLatestCheckedBlock: buySellLatestCheckedBlock,
+        buySellLatestCheckedBlock: newBuySellEvents.blockNumber,
         mehContractAddress: contractAddress,
+        chain: "mainnet",
+        middleWareID: "SF",
+        timestamp: Date.now()
     }
     const [isServing, pubErr ] = await uploader.publish(JSON.stringify(siteData))
 
