@@ -3,7 +3,7 @@ const { DB } = require("./src/db.js")
 const hre = require("hardhat");
 const { WebGateway } = require("./src/web.js")
 const { ImageEditor } = require("./src/imageEditor.js")
-const { AdsSnapshot } = require("./src/snapshots.js")
+const { AdsSnapshot, BuySellSnapshot } = require("./src/snapshots.js")
 const { logger } = require("./src/logger.js");
 NEXT_RETRY_DELAY = 1000 * 60 * 5 // 5 minutes
 MAX_NUM_OF_DOWNLOAD_ATTEMPTS = 5
@@ -196,7 +196,7 @@ async function main() {
     // save new snapshot to db (saving only fully processed snapshots)
     if ( adsSnapshot.gotOverlays() ) {
         const newSnapshot =  {
-            latestAdId: adsSnapshot.getLatestAdID(), // TODO return null if err
+            latestAdId: adsSnapshot.getLatestAdID(), // TODO return 0 if err
             linksMapJSON: adsSnapshot.getLinksMapJSON(),  // TODO return null if err
             bigPicBinary: await adsSnapshot.getMergedBigPic(),  // TODO return null if err
             adsBigPicUrl: await uploader.uploadAdsSnapshotPic(bigPicBinary) // return url or nulladsBigPicUrl
@@ -225,7 +225,7 @@ async function main() {
     if ( buySellSnapshot.gotOverlays() ) {
         // upload big pic and links map
         const newSnapshot =  {
-            latestBuySellId: buySellSnapshot.getLatestAdID(),  //  TODO null if err
+            latestBuySellId: buySellSnapshot.getLatestTransactionID(),  //  TODO null if err
             ownershipMapJSON: buySellSnapshot.ownershipMapJSON(),  //  TODO null if err
         }
         // TODO check that values are not null

@@ -25,7 +25,7 @@ class AdsSnapshot {
                 latestAdId: 0, // this is also unique ID of the snapshot
                 bigPicUrl: null,
                 bigPicBinary: null,
-                linksMapJSON: []
+                linksMapJSON: '[]'
             }
         this.newSnapshot = emptySnapshot
         if (Object.hasOwn(previousSnapshot, "latestAdId")) {
@@ -45,6 +45,7 @@ class AdsSnapshot {
     async overlay(ad) {
         if (this.mergedBigPic) {
             throw new Error("Cannot overlay - merged big pic already")}
+        // input, top and left are params for shark image processor
         this.overlays.push({ 
             input: ad.imageForPixelMap,
             top: (ad.fromY - 1) * 10,
@@ -79,6 +80,56 @@ class AdsSnapshot {
     }
 }
 
+class BuySellSnapshot {
+    constructor(previousSnapshot) {
+        this.isMerged = false
+        this._gotOverlays = false
+        if ( Object.hasOwn(previousSnapshot, "latestTransactionID") ) {
+            this.latestTransactionID = previousSnapshot.latestTransactionID
+            this.ownershipMapJSON = previousSnapshot.ownershipMapJSON
+        } else {
+            this.latestTransactionID = 0 
+            this.ownershipMapJSON = '[]'
+        }
+    }
+
+    _appendToOwnershipMapJSON(ownershipMapJSON, buySellTx) {
+        let parsedOwnershipMap = JSON.parse(ownershipMapJSON)
+        for (let x = buySellTx.fromX; x = buySellTx.toX; x++ ) {
+            for (let y = buySellTx.fromY; y = buySellTx.toY; y++ ) {
+                parsedOwnershipMap[x][y] = {
+                    price: buySellTx.price
+                }
+            }
+        }
+        return JSON.stringify(parsedOwnershipMap)
+    }
+
+    overlay(buySellTx) {
+        if (this.isMerged) {
+            throw new Error("Cannot overlay - merged already")}
+        this.ownershipMapJSON = this._appendToOwnershipMapJSON(
+            this.ownershipMapJSON,
+            buySellTx)
+        this._gotOverlays = true
+        this.latestTransactionID = buySellTx.ID
+    }
+
+    gotOverlays() {
+        return this._gotOverlays
+    }
+
+    getLatestTransactionID() {
+        return this.latestTransactionID
+    }
+
+    getOwnershipMapJSON(){
+        return this.ownershipMapJSON 
+    }
+
+}
+
 module.exports = {
     AdsSnapshot,
+    BuySellSnapshot,
   }
