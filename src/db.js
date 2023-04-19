@@ -99,6 +99,8 @@ class DB {
     }
 
     async getAdsNoImages() {
+      // TODO return cursor
+      // TODO if error return empty array and log error here
       var myquery =  
         {
           $and: [
@@ -124,6 +126,7 @@ class DB {
     }
 
     async appendImagesToAds(ads) {
+      // TODO return only result. log error here
       // prepare bulkwrite array
       let operations = []
       for (ad of ads) {

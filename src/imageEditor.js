@@ -40,6 +40,7 @@ class ImageEditor {
     }
 
     async getImageThumbBinary(ad) {
+      // todo log error here with additional fields
       return [imageBuffer, error] = await ie.fitInside(
         ad.fullImageBinary,
         this.conf.thumbnailParams.width,
@@ -49,6 +50,7 @@ class ImageEditor {
     }
 
     async getImageForPixelMap(ad) {
+      // todo log error here with additional fields
       const width = getDimensions(ad).width
       const height = getDimensions(ad).height
         ;[imageBuffer, error] = await ie.fitInside(

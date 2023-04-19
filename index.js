@@ -49,7 +49,7 @@ async function main() {
     let contract = new MillionEther(contractName, contractAddress)
     let db = new DB(hre.config.dbConf)
     await db.connect()
-    
+    // TODO check that DB is initialized correctly 
 
 
     // DOWNLOAD EVENTS
@@ -83,7 +83,6 @@ async function main() {
         logger.info(`${ insertsCount } new events were written to db`)
         let saved = await db.saveLatestBlockForEvent(NEW_IMAGE_EVENT_NAME, newEvents.blockNumber)
         logger.info(`${ saved ? "Saved" : "FAILED TO SAVE" } block ${newEvents.blockNumber} for ${NEW_IMAGE_EVENT_NAME} event to db`)
-        }
     }
 
     // NEWSTATUS
@@ -110,11 +109,10 @@ async function main() {
         }
       })
 
-    // save new events to db
+    // save new events and block number to db
     if ( formatedBuySellEvents.length > 0 && buySellEvents.blockNumber > 0 ) {
         const insertsCount = await db.addBuySellEvents(formatedBuySellEvents)
         logger.info(`${ insertsCount } new ${ BUY_SELL_EVENT_NAME } events were written to db`)
-        // save block number for event    
         let saved = await db.saveLatestBlockForEvent(BUY_SELL_EVENT_NAME, buySellEvents.blockNumber)
         logger.info(`${ saved ? "Saved" : "FAILED TO SAVE" } block ${buySellEvents.blockNumber} for ${ BUY_SELL_EVENT_NAME } event to db`)
     }
@@ -125,12 +123,12 @@ async function main() {
     // PREPARE DATA FOR ADS SNAPSHOT
 
     // get ads with no images (not downloaded)
-    let [ ads, adsLoadError ] = await db.getAdsNoImages()
+    let ads = await db.getAdsNoImages()
     logger.info(`Got ${ads.length} ads with no images.`)
 
     // download images and save to db
     let wg = new WebGateway()
-    for (ad of ads) {
+    for await (const ad of ads) {
         ad.updates = {}
         logger.info(`Downloading image for ad ID ${ad.ID} from ${ad.imageSourceUrl}...`)
         let [ downloadResult, error ] = await wg.downloadImage(ad.imageSourceUrl)
@@ -144,26 +142,26 @@ async function main() {
         } else {
             // if failed to download, decide if we want to retry later
             Object.assign(ad.updates, getRetryParams(error, ad.numOfTries))
-            ad.updates.error = JSON.stringify(error) // , Object.getOwnPropertyNames(error))
+            ad.updates.error = JSON.stringify(error)  // need to show error to user
+            // TODO also log error into logger if failed to download
         }
 
         // resize images
         if ( fullImageBinary ) {
             let ie = new ImageEditor({ thumbnailParams: THUMBNAIL_PARAMS })
             // image for thumbnail will fit configured size
-            ;[ ad.updates.imageThumb, error ] = await ie.getImageThumbBinary(ad) 
+            ad.updates.imageThumb = await ie.getImageThumbBinary(ad) 
             // image for pixelMap will resize ignoring aspect ratio
             // will also enlarge image if too small
-            ;[ ad.updates.imageForPixelMap, error ] = await ie.getImageForPixelMap(ad)
+            ad.updates.imageForPixelMap = await ie.getImageForPixelMap(ad)
+            // TODO add ad params to logger below
             logger.info(`Created image for pixel map`)
-            // single write of error for both resizes
-            if ( error ) {
-                ad.updates.error = JSON.stringify(error, Object.getOwnPropertyNames(error))
-            }
         }
     }
-    let [ updatesCount , updateError ] = await db.appendImagesToAds(ads)
-    logger.info(`Updated ${updatesCount} images in the db`)
+    let updatesCount = await db.appendImagesToAds(ads)
+    if ( updatesCount > 0 ) {
+        logger.info(`Updated ${ updatesCount } images in the db`)
+    }
 
 
 
@@ -191,23 +189,22 @@ async function main() {
 
     // retrieve ads with higher ID, sorted  by ID
     // (returns cursor)
-    const addsToBeAdded  = await db.getAdsFromID(adsSnapshot.getLatestAdID())
-    for await (const ad of addsToBeAdded) {
+    const adsToBeAdded = await db.getAdsFromID(adsSnapshot.getLatestAdID())
+    for await (const ad of adsToBeAdded) {
         adsSnapshot.overlay(ad)  // overlay new ads
     }
     // save new snapshot to db (saving only fully processed snapshots)
     if ( adsSnapshot.gotOverlays() ) {
-        // upload big pic and links map
-        const bigPicBinary = await adsSnapshot.getMergedBigPic() 
-        const adsBigPicUrl = ""
-        ;[ adsBigPicUrl, uploadError ] = await uploader.uploadAdsSnapshotPic(bigPicBinary)
         const newSnapshot =  {
-            latestAdId: adsSnapshot.getLatestAdID(),
-            linksMapJSON: adsSnapshot.getLinksMapJSON(),
-            bigPicBinary: bigPicBinary,
-            adsBigPicUrl: adsBigPicUrl
+            latestAdId: adsSnapshot.getLatestAdID(), // TODO return null if err
+            linksMapJSON: adsSnapshot.getLinksMapJSON(),  // TODO return null if err
+            bigPicBinary: await adsSnapshot.getMergedBigPic(),  // TODO return null if err
+            adsBigPicUrl: await uploader.uploadAdsSnapshotPic(bigPicBinary) // return url or nulladsBigPicUrl
         }
-        await db.saveAdsSnapshot(newSnapshot)
+        // TODO check snapshot validity (important as we are not catching upload errors)
+        if (await db.saveAdsSnapshot(newSnapshot)) {
+            logger.info(`Saved snapshot`)  // TODO add more info
+        }
     }
 
 
@@ -222,36 +219,38 @@ async function main() {
     const transactionsToBeAdded = 
         await db.getTransactionsFromID(buySellSnapshot.getLatestTransactionID())
     for await (const buySellTx of transactionsToBeAdded) {
-        buySellSnapshot.overlay(buySellTx)  // overlay new ads
+        buySellSnapshot.overlay(buySellTx)
     }
     // save new snapshot to db (saving only fully processed snapshots)
     if ( buySellSnapshot.gotOverlays() ) {
         // upload big pic and links map
         const newSnapshot =  {
-            latestBuySellId: buySellSnapshot.getLatestAdID(),
-            ownershipMapJSON: buySellSnapshot.getLinksMapJSON(),
+            latestBuySellId: buySellSnapshot.getLatestAdID(),  //  TODO null if err
+            ownershipMapJSON: buySellSnapshot.ownershipMapJSON(),  //  TODO null if err
         }
-        await db.saveBuySellSnapshot(newSnapshot)
+        // TODO check that values are not null
+        if ( await db.saveBuySellSnapshot(newSnapshot) ){
+            logger.info(`Saved buySell snapshot`) // TODO add pararms
+        }
     }
     
 
 
     // PUBLISH SITE DATA
     // pushes data on every cycle
-    const latestAdsSnapshot = await db.getAdsSnapshotBeforeID('infinity')
-    const latestBuySellSnapshot = await db.getLatestBuySellSnapshot()
+    // gets all fields from db (independant of the above code)
     const siteData = {
-        adsSnapshot: latestAdsSnapshot,
-        buySellSnapshot: latestBuySellSnapshot,
-        newImageLatestCheckedBlock: newEvents.blockNumber,
-        buySellLatestCheckedBlock: buySellEvents.blockNumber,
+        adsSnapshot: await db.getAdsSnapshotBeforeID('infinity'),
+        buySellSnapshot: await db.getLatestBuySellSnapshot(),
+        newImageLatestCheckedBlock: await db.getLatestBlockForEvent(NEW_IMAGE_EVENT_NAME),
+        buySellLatestCheckedBlock: await db.getLatestBlockForEvent(BUY_SELL_EVENT_NAME),
         mehContractAddress: contractAddress,
         chain: "mainnet",
         middleWareID: "SF",
         timestamp: Date.now()
     }
-    const [isServing, pubErr ] = await uploader.publish(JSON.stringify(siteData))
-
+    // TODO check that all inportant values are present
+    await uploader.publish(JSON.stringify(siteData))  // TODO log err in uploader
     await db.close()
 }
 
