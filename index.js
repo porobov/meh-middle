@@ -36,7 +36,6 @@ function getRetryParams(error, numOfTries) {
     } else {
         // stop downloading attempts if received this flag
         response.failedToDownLoad = true
-        logger.info(`Failed to download`) 
     }
     return response
 }
@@ -49,7 +48,6 @@ async function main() {
     let contract = new MillionEther(contractName, contractAddress)
     let db = new DB(hre.config.dbConf)
     await db.connect()
-    // TODO check that DB is initialized correctly 
 
 
     // DOWNLOAD EVENTS
@@ -74,6 +72,8 @@ async function main() {
         adUrl: ev.adUrl,
         imageSourceUrl: ev.imageSourceUrl,
         numOfTries: 0,  // num of download tries for ad image
+        failedToDownLoad: false,  // flag. If image failed to download
+        nextTryTimestamp: 0,  // next download attempt timestamp
       }
     })
 
@@ -143,7 +143,9 @@ async function main() {
             // if failed to download, decide if we want to retry later
             Object.assign(ad.updates, getRetryParams(error, ad.numOfTries))
             ad.updates.error = JSON.stringify(error)  // need to show error to user
-            // TODO also log error into logger if failed to download
+            if ( ad.updates.failedToDownLoad ) {
+                logger.warn(`Failed to download image for ad ID ${ ad.ID }. Source: ${ ad.imageSourceUrl }`)
+            }
         }
 
         // resize images
@@ -154,8 +156,7 @@ async function main() {
             // image for pixelMap will resize ignoring aspect ratio
             // will also enlarge image if too small
             ad.updates.imageForPixelMap = await ie.getImageForPixelMap(ad)
-            // TODO add ad params to logger below
-            logger.info(`Created image for pixel map`)
+            logger.info(`Created pixel map image for ad`)
         }
     }
     let updatesCount = await db.appendImagesToAds(ads)
@@ -197,13 +198,22 @@ async function main() {
     if ( adsSnapshot.gotOverlays() ) {
         const newSnapshot =  {
             latestAdId: adsSnapshot.getLatestAdID(), // TODO return 0 if err
-            linksMapJSON: adsSnapshot.getLinksMapJSON(),  // TODO return null if err
+            linksMapJSON: adsSnapshot.getLinksMapJSON(),  // TODO return '[]' if err
             bigPicBinary: await adsSnapshot.getMergedBigPic(),  // TODO return null if err
             adsBigPicUrl: await uploader.uploadAdsSnapshotPic(bigPicBinary) // return url or nulladsBigPicUrl
         }
-        // TODO check snapshot validity (important as we are not catching upload errors)
-        if (await db.saveAdsSnapshot(newSnapshot)) {
-            logger.info(`Saved snapshot`)  // TODO add more info
+        // check snapshot validity (important as we are not catching upload errors)
+        if (
+            newSnapshot.latestAdId > 0
+            && newSnapshot.linksMapJSON != '[]'
+            && newSnapshot.bigPicBinary != null
+            && newSnapshot.adsBigPicUrl != null
+        ) {
+            if (await db.saveAdsSnapshot(newSnapshot)) {
+                logger.info(`Saved snapshot with latest ad ID: ${newSnapshot.latestAdId}`)
+            }
+        } else {
+            logger.error(`Snapshot got overlays, but some values are null. Latest buySell ID: ${newSnapshot.latestAdId}`)
         }
     }
 
@@ -226,11 +236,15 @@ async function main() {
         // upload big pic and links map
         const newSnapshot =  {
             latestBuySellId: buySellSnapshot.getLatestTransactionID(),  //  TODO null if err
-            ownershipMapJSON: buySellSnapshot.ownershipMapJSON(),  //  TODO null if err
+            ownershipMapJSON: buySellSnapshot.getOwnershipMapJSON(),  //  TODO '[]' if err
         }
-        // TODO check that values are not null
-        if ( await db.saveBuySellSnapshot(newSnapshot) ){
-            logger.info(`Saved buySell snapshot`) // TODO add pararms
+        // Check values 
+        if (newSnapshot.latestBuySellId != null && newSnapshot.ownershipMapJSON != '[]') {
+            if (await db.saveBuySellSnapshot(newSnapshot)) {
+                logger.info(`Saved buySell snapshot. Latest buySell ID: ${ newSnapshot.latestBuySellId }`)
+            }
+        } else {
+            logger.error(`Snapshot got overlays, but some values are null. Latest buySell ID: ${ newSnapshot.latestBuySellId }`)
         }
     }
     
@@ -249,11 +263,27 @@ async function main() {
         middleWareID: "SF",
         timestamp: Date.now()
     }
-    // TODO check that all inportant values are present
-    await uploader.publish(JSON.stringify(siteData))  // TODO log err in uploader
+    // check that all inportant values are present
+    if (
+        siteData.adsSnapshot != {}
+        && siteData.buySellSnapshot != {}
+        && siteData.newImageLatestCheckedBlock > 0
+        && siteData.buySellLatestCheckedBlock > 0
+    ) {
+        const isServing = await uploader.publish(JSON.stringify(siteData))
+        if (isServing) {
+            logger.info(`Site data publised. Latest blocks checked: 
+                        NewImage: ${siteData.newImageLatestCheckedBlock}, 
+                        BuySell: ${siteData.buySellLatestCheckedBlock} `)
+        }
+    } else {
+        logger.error("Built wrong site data. Some values are absent", siteData)
+    }
+        
     await db.close()
 }
 
+// TODO check metadata as second value to logger function
 
 
 main()
