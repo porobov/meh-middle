@@ -15,8 +15,8 @@ THUMBNAIL_PARAMS = {
 DEFAULT_BG_PATH = "./static/bg.png"
 const NEW_IMAGE_EVENT_NAME = "NewImage"
 const BUY_SELL_EVENT_NAME = "NewAreaStatus"
-const MAIN_LOOP_INTERVAL_MS = 5000
-
+const MAIN_LOOP_INTERVAL_MS = 5000  // actually a pause between cycles
+let db = new DB(hre.config.dbConf)
 
 // analyzes error of image download
 function getRetryParams(error, numOfTries) {
@@ -47,8 +47,6 @@ async function mainLoop() {
     let contractName = "MillionEther"
     let contractAddress = "0x15dbdB25f870f21eaf9105e68e249E0426DaE916"
     let contract = new MillionEther(contractName, contractAddress)
-    let db = new DB(hre.config.dbConf)
-    await db.connect()
 
 
     // DOWNLOAD EVENTS
@@ -280,17 +278,30 @@ async function mainLoop() {
     } else {
         logger.error("Built wrong site data. Some values are absent", siteData)
     }
-        
-    await db.close()
 }
 
-// TODO check metadata as second value to logger function
-// TODO exit gracefully - clearInterval(intervalObj);
-// TODO db close gracefully
 async function main() {
-    const intervalObj = setInterval(async () => {
-        await mainLoop()
-      }, MAIN_LOOP_INTERVAL_MS);
+
+    // register SIGINT event
+    process.on('SIGINT', async () => {
+        console.log('Terminating...')
+        process.exit(0)
+    })
+
+    async function interval() {
+        try {
+            logger.info(`================= STARTING NEW CYCLE =================`)
+            await db.connect()
+            await mainLoop()
+        } catch (e) {
+            throw e
+        } finally {
+            await db.close()
+        }
+        setTimeout(await interval(), MAIN_LOOP_INTERVAL_MS)
+    }
+
+    await interval()
 }
 
 main()
