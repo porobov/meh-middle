@@ -5,21 +5,23 @@ const { WebGateway } = require("./src/web.js")
 const { ImageEditor } = require("./src/imageEditor.js")
 const { AdsSnapshot, BuySellSnapshot } = require("./src/snapshots.js")
 const { logger } = require("./src/logger.js");
-NEXT_RETRY_DELAY = 1000 * 60 * 5 // 5 minutes
-MAX_NUM_OF_DOWNLOAD_ATTEMPTS = 5
-STATUSCODES_ALLOWING_RETRY = [ 408, 502, 503, 504, 429 ]
+
+// TODO tidy up configs
+NEXT_RETRY_DELAY = 1000 * 60 * 5 // 5 minutes - will retry to download. Next attempt will be twice long
+MAX_NUM_OF_DOWNLOAD_ATTEMPTS = 5  // number of download attempts for image
+STATUSCODES_ALLOWING_RETRY = [ 408, 502, 503, 504, 429 ]  // downloader will try to download images again
 THUMBNAIL_PARAMS = {
     width: 400,
     height: 400
 }
-DEFAULT_BG_PATH = "./static/bg.png"
+DEFAULT_BG_PATH = "./static/bg.png" // path to bg image for pixelmap
 const NEW_IMAGE_EVENT_NAME = "NewImage"
 const BUY_SELL_EVENT_NAME = "NewAreaStatus"
 const MAIN_LOOP_INTERVAL_MS = 5000  // actually a pause between cycles
 let db = new DB(hre.config.dbConf)
 
 // analyzes error of image download
-function getRetryParams(error, numOfTries) {
+function constructRetryParams(error, numOfTries) {
     const response = {}
     if (Object.hasOwn(error, 'response') 
         && Object.hasOwn(error.response, 'status')
@@ -140,7 +142,7 @@ async function mainLoop() {
             logger.info(`Downloaded ${downloadResult.extension} image`)
         } else {
             // if failed to download, decide if we want to retry later
-            Object.assign(ad.updates, getRetryParams(error, ad.numOfTries))
+            Object.assign(ad.updates, constructRetryParams(error, ad.numOfTries))
             ad.updates.error = JSON.stringify(error)  // need to show error to user
             if ( ad.updates.failedToDownLoad ) {
                 logger.warn(`Failed to download image for ad ID ${ ad.ID }. Source: ${ ad.imageSourceUrl }`)

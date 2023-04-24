@@ -3,6 +3,20 @@ const chalk = require("chalk")
 const { logger } = require("./logger.js")
 IMAGES_BATCH_SIZE = 2
 
+// try-catch wrapper
+tryCatch = async (tryer) => {
+  try {
+    const result = await tryer()
+    return [result, null]
+  } catch (error) {
+    logger.info(chalk.red(" ↓↓↓ Cought error ↓↓↓ "))  // TODO remove this??
+    logger.info(error)
+    logger.info(chalk.red(" ↑↑↑ Cought error ↑↑↑ "))
+    return [null, error]
+  }
+}
+
+
 class DB {
 
     constructor(conf) {
@@ -18,6 +32,7 @@ class DB {
           this.ads = this.db.collection("ads")
           this.tempStateId = this.conf.stateRecordName
         }
+          // TODO check that DB is initialized correctly 
     }
     
     async close() {
@@ -27,6 +42,7 @@ class DB {
     // State
 
     // creating empty one for the first db setup
+    // TODO add new status record
     async createEmptyStateRecord() {
       const [res, err] = await this.tryCatch(
         async () => await this.state.find().limit(1).toArray())
@@ -69,7 +85,7 @@ class DB {
           async () => (await this.state.findOne(myquery))[this.recordNameForEvent(eventName)])
     }
 
-    // Saving events
+    // SAVING EVENTS
 
     async createEmptyEventsCollection(eventName) {
       const [res, err] = await this.tryCatch(
@@ -82,7 +98,7 @@ class DB {
       await this.ads.createIndex( { "ID": 1 }, { unique: true } )
     }
 
-    // returns array
+    // will put events into db
     async addAdsEvents(decodedEvents) {
       // TODO return only result. log error here
       const [res, err] = await this.tryCatch(
@@ -98,6 +114,10 @@ class DB {
       }
     }
 
+
+    // PREPARE DATA FOR ADS SNAPSHOT
+
+    // returns ads with no downloaded images 
     async getAdsNoImages() {
       // TODO return cursor
       // TODO if error return empty array and log error here
@@ -125,6 +145,7 @@ class DB {
       }
     }
 
+    // saves downloaded and processed images 
     async appendImagesToAds(ads) {
       // TODO return only result. log error here
       // prepare bulkwrite array
@@ -149,17 +170,24 @@ class DB {
       }
     }
 
-    tryCatch = async (tryer) => {
-        try {
-          const result = await tryer()
-          return [result, null]
-        } catch (error) {
-          logger.info(chalk.red(" ↓↓↓ Cought error ↓↓↓ "))
-          logger.info(error)
-          logger.info(chalk.red(" ↑↑↑ Cought error ↑↑↑ "))
-          return [null, error]
-        }
-    }
+
+    // CONSTRUCT ADS SNAPSHOT
+
+    async addBuySellEvents(formatedBuySellEvents) {}
+    async getAdsSnapshotBeforeID('infinity')
+    async getEarliestAdIdAfterTimestamp( adsSnapshot.getLatestAdDownloadTimestamp()
+    async getAdsFromID(adsSnapshot.getLatestAdID())
+    async saveAdsSnapshot(newSnapshot)
+
+
+    // CONSTRUCT BUY SELL SNAPSHOT 
+
+    async getLatestBuySellSnapshot()
+    async getTransactionsFromID(buySellSnapshot.getLatestTransactionID())
+    async saveBuySellSnapshot(newSnapshot)
+    async getAdsSnapshotBeforeID('infinity')
+
+
 }
 
 module.exports = {
