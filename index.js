@@ -15,8 +15,8 @@ THUMBNAIL_PARAMS = {
     height: 400
 }
 DEFAULT_BG_PATH = "./static/bg.png" // path to bg image for pixelmap
-const NEW_IMAGE_EVENT_NAME = "NewImage"
-const BUY_SELL_EVENT_NAME = "NewAreaStatus"
+const NEW_IMAGE_EVENT_NAME = hre.config.dbConf.newImageEventName
+const BUY_SELL_EVENT_NAME = hre.config.dbConf.buySellEventName
 const MAIN_LOOP_INTERVAL_MS = 5000  // actually a pause between cycles
 let db = new DB(hre.config.dbConf)
 
@@ -283,7 +283,8 @@ async function mainLoop() {
 }
 
 async function main() {
-
+    
+    logger.info(`STARTING APP`)
     // register SIGINT event
     process.on('SIGINT', async () => {
         console.log('Terminating...')

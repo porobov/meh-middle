@@ -2,11 +2,14 @@ require("@nomicfoundation/hardhat-toolbox");
 require("dotenv").config();
 
 /** @type import('hardhat/config').HardhatUserConfig */
+// TODO move mogo credentials to env
 module.exports = {
-  dbConf: {
-    stateRecordName: "two",
+  dbConf: {  // TODO rename to some other conf name
+    stateRecordName: "two",  // a single record in state collection is responsible for state
     dbAccessUrl: "mongodb+srv://upala-express:1l42hOuMYBVAjfte@cluster0.xix8e.mongodb.net/test?retryWrites=true&w=majority&useNewUrlParser=true&useUnifiedTopology=true",
     dbName: "test",
+    newImageEventName: "NewImage",
+    buySellEventName: "NewAreaStatus",
   },
   solidity: "0.8.18",
 	defaultNetwork: "localhost",

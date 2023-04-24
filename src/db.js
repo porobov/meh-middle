@@ -28,35 +28,74 @@ class DB {
         const [res, err] = await this.tryCatch(async () => await this.client.connect())
         if (!err) {
           this.db = this.client.db(this.conf.dbName)
+          // initialize collections
           this.state = this.db.collection("state")
           this.ads = this.db.collection("ads")
+          this.buySells = this.db.collection("buySells")
+          this.adsSnapshots = this.db.collection("adsSnapshots")
+          this.buySellSnapshots = this.db.collection("buySellSnapshots")
+          // record id for current state
           this.tempStateId = this.conf.stateRecordName
+
+          // check that DB is initialized correctly 
+          const allCollections = [this.state, this.ads, this.buySells, this.adsSnapshots, this.buySellSnapshots]
+          for (const collection of allCollections) {
+            if ( this.isEmptyCollection(collection) ) {
+              throw new Error(`Got empty collection please run createDB.js script first`)
+            }
+          }
         }
-          // TODO check that DB is initialized correctly 
     }
     
     async close() {
         const [res, err] = await this.tryCatch(async () => await this.client.close())
     }
 
-    // State
+
+    // DB SETUP
+
+    // checking if collection is empty
+    async isEmptyCollection(collection) {
+      const [res, err] = await this.tryCatch(
+        async () => await collection.find().limit(1).toArray())
+      if (res.length > 0) {
+        return true
+      } else {
+        return false
+      }
+    }
+
+    // drop collection if it exists
+    async dropCollection(collection) {
+      if (await this.isEmptyCollection(collection)> 0) {
+        collection.drop()
+        logger.info(`Dropped collection ${ collection.name }`) // TODO find .name method
+      }
+    }
 
     // creating empty one for the first db setup
-    // TODO add new status record
     async createEmptyStateRecord() {
-      const [res, err] = await this.tryCatch(
-        async () => await this.state.find().limit(1).toArray())
-      if (res.length > 0) {
-        logger.info(`Dropping state...`)
-        this.state.drop()
-      }
-      const eventName = "NewImage"
+      await this.dropCollection(this.state)
       await this.state.createIndex( { "state_id": 1 }, { unique: true } )
       let emptyStateRecord = {
           "state_id": this.tempStateId,
-          [this.recordNameForEvent(eventName)]: 0
+          [this.recordNameForEvent(this.conf.newImageEventName)]: 0,
+          [this.recordNameForEvent(this.conf.buySellEventName)]: 0,
       }
       const p = await this.state.insertOne(emptyStateRecord)
+    }
+
+    async createCollectionWithUniqueID(collection) {
+      await this.dropCollection(this.ads)
+      logger.info(`Creating collection ${ collection.name }`)  // TODO find name
+      await this.ads.createIndex( { "ID": 1 }, { unique: true } )
+    }
+
+    async createDB() {
+      await this.createEmptyStateRecord()
+      for (const collection of [this.ads, this.buySells, this.adsSnapshots, this.buySellSnapshots]) {
+        await this.createCollectionWithUniqueID(collection)
+      }
     }
 
     recordNameForEvent(eventName) {
@@ -87,16 +126,6 @@ class DB {
 
     // SAVING EVENTS
 
-    async createEmptyEventsCollection(eventName) {
-      const [res, err] = await this.tryCatch(
-        async () => await this.ads.find().toArray())
-      if (res.length > 0) {
-        logger.info(`Dropping collection...`)
-        this.ads.drop()
-      } 
-      logger.info(`Creating collection`)
-      await this.ads.createIndex( { "ID": 1 }, { unique: true } )
-    }
 
     // will put events into db
     async addAdsEvents(decodedEvents) {
@@ -187,7 +216,7 @@ class DB {
     async saveBuySellSnapshot(newSnapshot)
     async getAdsSnapshotBeforeID('infinity')
 
-
+// TODO tidy up snapshot records (keep only some limited tail)
 }
 
 module.exports = {
