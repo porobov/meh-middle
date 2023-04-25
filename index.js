@@ -178,10 +178,9 @@ async function mainLoop() {
 
     // getting earliest ad snapshot 
     const snapshotOptions = { defaultBgPath: DEFAULT_BG_PATH }
-    const adsSnapshot = new AdsSnapshot(
-        await db.getAdsSnapshotBeforeID('infinity'), // returns {} if no snapshots are present
-        snapshotOptions  // options
-        )
+    let previousSnapshot = await db.getAdsSnapshotBeforeID('infinity')
+    if (previousSnapshot == null) { return }
+    const adsSnapshot = new AdsSnapshot( previousSnapshot, snapshotOptions )
 
     // checking if got timestamp higher than of the snapshot, but with lower ID
     // if so find an older snapshot
@@ -227,7 +226,7 @@ async function mainLoop() {
     // CONSTRUCT BUY SELL SNAPSHOT 
 
     const buySellSnapshot = new BuySellSnapshot(
-        await db.getLatestBuySellSnapshot(), // returns {} if no snapshots are present
+        await db.getLatestBuySellSnapshot(), 
         )
 
     // retrieve events with higher ID, sorted  by ID

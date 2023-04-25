@@ -83,12 +83,26 @@ class DB {
       await this.ads.createIndex( { "ID": 1 }, { unique: true } )
     }
 
+  // snapshot to be returned when there are no snapshots yet
+  async createEmptyAdsSnapshot() {
+    let emptySnapshot = {
+      latestAdId: 0, // this is also unique ID of the snapshot
+      bigPicUrl: null,
+      bigPicBinary: null,
+      linksMapJSON: '[]'
+    }
+    const [res, err] = await this.tryCatch(
+      async () => await collection.insertOne(emptySnapshot))
+  }
+
+
     async createDB() {
       await this.createEmptyStateRecord()
       for (const collection of [this.ads, this.buySells, this.adsSnapshots, this.buySellSnapshots]) {
         await this.createCollectionWithUniqueID(collection)
       }
       await this.flagDbCreation()
+      await createEmptyAdsSnapshot()
     }
 
     async saveLatestBlockForEvent(eventName, latestBlock) {
@@ -128,9 +142,8 @@ class DB {
       if (err && Object.hasOwn(err, 'code') && err.code === 11000) {
         logger.info('Duplicate key error');
       } 
-      if (res) {
-        const count = Object.hasOwn(res, 'insertedCount') ? res.insertedCount : 0
-        return count
+      if (res && Object.hasOwn(res, 'insertedCount')) {
+        return res.insertedCount
       } else {
         return 0
       }
@@ -167,7 +180,6 @@ class DB {
 
     // saves downloaded and processed images 
     async appendImagesToAds(ads) {
-      // TODO return only result. log error here
       // prepare bulkwrite array
       let operations = []
       for (ad of ads) {
@@ -184,16 +196,27 @@ class DB {
           async () => await this.ads.bulkWrite(operations, { ordered: false }))
       }
       if (res && Object.hasOwn(res, 'modifiedCount') && res.modifiedCount > 0) {
-        return [ res.modifiedCount , err ]
+        return res.modifiedCount
       } else { 
-        return [ 0 , err ]
+        return 0
       }
     }
 
 
     // CONSTRUCT ADS SNAPSHOT
 
-    async getAdsSnapshotBeforeID('infinity')
+    // get ads snapshot before ad ID
+    // snapshots have id of latest included events
+    async getAdsSnapshotBeforeID(adsID) {
+      let query = { latestAdId: { $lt: adsID }}
+      if ( adsID == 'infinity' ) {
+          query = {$query:{},$orderby:{latestAdId:-1}}
+      }
+      const [res, err] = await this.tryCatch(
+        async () => await this.state.findOne(query))
+      return res
+    }
+
     async getEarliestAdIdAfterTimestamp( adsSnapshot.getLatestAdDownloadTimestamp()
     async getAdsFromID(adsSnapshot.getLatestAdID())
     async saveAdsSnapshot(newSnapshot)

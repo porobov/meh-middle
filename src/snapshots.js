@@ -20,19 +20,6 @@ class AdsSnapshot {
     constructor(previousSnapshot, options) {
         this.defaultBgPath = options.defaultBgPath
         this.overlays = []
-        // spec for the snapshot record
-        let emptySnapshot = {
-                latestAdId: 0, // this is also unique ID of the snapshot
-                bigPicUrl: null,
-                bigPicBinary: null,
-                linksMapJSON: '[]'
-            }
-        this.newSnapshot = emptySnapshot
-        if (Object.hasOwn(previousSnapshot, "latestAdId")) {
-            this.previousSnapshot = previousSnapshot
-        } else {
-            this.previousSnapshot = emptySnapshot
-        }
         this.latestAdId = this.previousSnapshot.latestAdId
     }
 
@@ -51,7 +38,7 @@ class AdsSnapshot {
             top: (ad.fromY - 1) * 10,
             left: (ad.fromX - 1) * 10
         })
-        this.newSnapshot.linksMapJSON = buildLinksMapJSON(this.previousSnapshot.linksMapJSON, ad)
+        this.linksMapJSON = buildLinksMapJSON(this.previousSnapshot.linksMapJSON, ad)
         this.latestAdId = ad.ID
     }
 
@@ -76,7 +63,7 @@ class AdsSnapshot {
     }
 
     getLinksMapJSON() {
-        return this.newSnapshot.linksMapJSON
+        return this.linksMapJSON
     }
 }
 
