@@ -187,10 +187,10 @@ async function mainLoop() {
     // (relevant to images that were uploaded after retries)
     const earliestID = await db.getEarliestAdIdAfterTimestamp(
         adsSnapshot.getLatestAdDownloadTimestamp())
-    if (earliestID < adsSnapshot.getLatestAdID()) { 
-        adsSnapshot = new AdsSnapshot(
-            await db.getAdsSnapshotBeforeID(earliestID),
-            snapshotOptions)
+    if (earliestID < adsSnapshot.getLatestAdID()) {
+        let prevSnapshot = await db.getAdsSnapshotBeforeID(earliestID)
+        if (prevSnapshot == null) { return }
+        adsSnapshot = new AdsSnapshot(prevSnapshot, snapshotOptions)
     }
 
     // retrieve ads with higher ID, sorted  by ID
