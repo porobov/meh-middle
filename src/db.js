@@ -19,10 +19,10 @@ tryCatch = async (tryer) => {
 
 class DB {
 
-    constructor(conf) {
-        this.client = new MongoClient(conf.dbAccessUrl)
-        this.conf = conf
-    }
+  constructor(conf) {
+    this.client = new MongoClient(conf.dbAccessUrl)
+    this.conf = conf
+  }
 
   async connect(dbName) {
     const [res, err] = await this.tryCatch(async () => await this.client.connect())
@@ -38,50 +38,50 @@ class DB {
       this.tempStateId = this.conf.stateRecordName
     }
   }
-    
-    async close() {
-        const [res, err] = await this.tryCatch(async () => await this.client.close())
+
+  async close() {
+    const [res, err] = await this.tryCatch(async () => await this.client.close())
+  }
+
+
+  // DB SETUP
+
+  // checking if collection is empty
+  async isEmptyCollection(collection) {
+    const [res, err] = await this.tryCatch(
+      async () => await collection.find().limit(1).toArray())
+    if (res.length > 0) {
+      return true
+    } else {
+      return false
     }
+  }
 
-
-    // DB SETUP
-
-    // checking if collection is empty
-    async isEmptyCollection(collection) {
-      const [res, err] = await this.tryCatch(
-        async () => await collection.find().limit(1).toArray())
-      if (res.length > 0) {
-        return true
-      } else {
-        return false
-      }
+  // drop collection if it exists
+  async dropCollection(collection) {
+    if (!(await this.isEmptyCollection(collection))) {
+      collection.drop()
+      logger.info(`Dropped collection ${collection.name}`) // TODO find .name method
     }
+  }
 
-    // drop collection if it exists
-    async dropCollection(collection) {
-      if ( !(await this.isEmptyCollection(collection)) ) {
-        collection.drop()
-        logger.info(`Dropped collection ${ collection.name }`) // TODO find .name method
-      }
+  // creating empty one for the first db setup
+  async createEmptyStateRecord() {
+    await this.dropCollection(this.state)
+    await this.state.createIndex({ "state_id": 1 }, { unique: true })
+    let emptyStateRecord = {
+      "state_id": this.tempStateId,
+      [this.recordNameForEvent(this.conf.newImageEventName)]: 0,
+      [this.recordNameForEvent(this.conf.buySellEventName)]: 0,
     }
+    const p = await this.state.insertOne(emptyStateRecord)
+  }
 
-    // creating empty one for the first db setup
-    async createEmptyStateRecord() {
-      await this.dropCollection(this.state)
-      await this.state.createIndex( { "state_id": 1 }, { unique: true } )
-      let emptyStateRecord = {
-          "state_id": this.tempStateId,
-          [this.recordNameForEvent(this.conf.newImageEventName)]: 0,
-          [this.recordNameForEvent(this.conf.buySellEventName)]: 0,
-      }
-      const p = await this.state.insertOne(emptyStateRecord)
-    }
-
-    async createCollectionWithUniqueID(collection) {
-      await this.dropCollection(this.ads)
-      logger.info(`Creating collection ${ collection.name }`)  // TODO find name
-      await this.ads.createIndex( { "ID": 1 }, { unique: true } )
-    }
+  async createCollectionWithUniqueID(collection) {
+    await this.dropCollection(this.ads)
+    logger.info(`Creating collection ${collection.name}`)  // TODO find name
+    await this.ads.createIndex({ "ID": 1 }, { unique: true })
+  }
 
   // snapshot to be returned when there are no snapshots yet
   async createEmptyAdsSnapshot() {
@@ -96,26 +96,26 @@ class DB {
   }
 
 
-    async createDB() {
-      await this.createEmptyStateRecord()
-      for (const collection of [this.ads, this.buySells, this.adsSnapshots, this.buySellSnapshots]) {
-        await this.createCollectionWithUniqueID(collection)
-      }
-      await this.flagDbCreation()
-      await createEmptyAdsSnapshot()
+  async createDB() {
+    await this.createEmptyStateRecord()
+    for (const collection of [this.ads, this.buySells, this.adsSnapshots, this.buySellSnapshots]) {
+      await this.createCollectionWithUniqueID(collection)
     }
+    await this.flagDbCreation()
+    await createEmptyAdsSnapshot()
+  }
 
-    async saveLatestBlockForEvent(eventName, latestBlock) {
-        var myquery = { state_id: this.tempStateId };
-        var newvalues = { $set: { [this.recordNameForEvent(eventName)]: latestBlock} };
-        const [ saveResult, err ] = await this.tryCatch(
-          async () => await this.state.updateOne(myquery, newvalues))
-        if (saveResult && Object.hasOwn(saveResult, 'modifiedCount') && saveResult.modifiedCount == 1) {
-          return true
-        } else {
-          return false
-        }
+  async saveLatestBlockForEvent(eventName, latestBlock) {
+    var myquery = { state_id: this.tempStateId };
+    var newvalues = { $set: { [this.recordNameForEvent(eventName)]: latestBlock } };
+    const [saveResult, err] = await this.tryCatch(
+      async () => await this.state.updateOne(myquery, newvalues))
+    if (saveResult && Object.hasOwn(saveResult, 'modifiedCount') && saveResult.modifiedCount == 1) {
+      return true
+    } else {
+      return false
     }
+  }
 
   async getLatestBlockForEvent(eventName) {
     var myquery = { state_id: this.tempStateId };
@@ -125,109 +125,114 @@ class DB {
     return res  // will return null on error and log error
   }
 
-    // SAVING EVENTS
+  // SAVING EVENTS
 
-    async addAdsEvents(decodedEvents) {
-      return await _addEvents(decodedEvents, this.ads)
+  async addAdsEvents(decodedEvents) {
+    return await _addEvents(decodedEvents, this.ads)
+  }
+
+  async addBuySellEvents(decodedEvents) {
+    return await _addEvents(decodedEvents, this.buySells)
+  }
+
+  // will put events into db
+  async _addEvents(decodedEvents, collection) {
+    const [res, err] = await this.tryCatch(
+      async () => await collection.insertMany(decodedEvents, { ordered: false }))
+    if (err && Object.hasOwn(err, 'code') && err.code === 11000) {
+      logger.info('Duplicate key error');
     }
-
-    async addBuySellEvents(decodedEvents) {
-      return await _addEvents(decodedEvents, this.buySells)
+    if (res && Object.hasOwn(res, 'insertedCount')) {
+      return res.insertedCount
+    } else {
+      return 0
     }
+  }
 
-    // will put events into db
-    async _addEvents(decodedEvents, collection) {
-      const [res, err] = await this.tryCatch(
-        async () => await collection.insertMany(decodedEvents, { ordered: false }))
-      if (err && Object.hasOwn(err, 'code') && err.code === 11000) {
-        logger.info('Duplicate key error');
-      } 
-      if (res && Object.hasOwn(res, 'insertedCount')) {
-        return res.insertedCount
-      } else {
-        return 0
-      }
-    }
+  // PREPARE DATA FOR ADS SNAPSHOT
 
-    // PREPARE DATA FOR ADS SNAPSHOT
-
-    // returns ads with no downloaded images 
-    async getAdsNoImages() {
-      // TODO return cursor
-      // TODO if error return empty array and log error here
-      var myquery =  
+  // returns ads with no downloaded images 
+  async getAdsNoImages() {
+    // TODO return cursor
+    // TODO if error return empty array and log error here
+    var myquery =
+    {
+      $and: [
         {
-          $and: [
-            { $or:[
-              {nextTryTimestamp: {$lt:Date.now()}},
-              {nextTryTimestamp: {$exists:false}}]}, 
-            { $or:[
-              {failedToDownLoad: false },
-              {failedToDownLoad: {$exists:false}}]}, 
-            { imageForPixelMap: {$exists:false} }
-          ]
-        }
-      let [res, err ] = await this.tryCatch(
-        async () => await this.ads
-          .find(myquery)
-          .limit(this.conf.imagesBatchSize))
-      if (res) {
-        return res
-      } else {
-        return []
-      }
+          $or: [
+            { nextTryTimestamp: { $lt: Date.now() } },
+            { nextTryTimestamp: { $exists: false } }]
+        },
+        {
+          $or: [
+            { failedToDownLoad: false },
+            { failedToDownLoad: { $exists: false } }]
+        },
+        { imageForPixelMap: { $exists: false } }
+      ]
     }
-
-    // saves downloaded and processed images 
-    async appendImagesToAds(ads) {
-      // prepare bulkwrite array
-      let operations = []
-      for (ad of ads) {
-        operations.push({ updateOne: {
-              "filter": { ID: ad.ID},
-              "update": { $set: ad.updates }
-            }
-          })
-      }
-      // bulk write
-      let [ res, err ] = [ null, null ]
-      if (operations.length > 0) {
-        [res, err ] = await this.tryCatch(
-          async () => await this.ads.bulkWrite(operations, { ordered: false }))
-      }
-      if (res && Object.hasOwn(res, 'modifiedCount') && res.modifiedCount > 0) {
-        return res.modifiedCount
-      } else { 
-        return 0
-      }
-    }
-
-
-    // CONSTRUCT ADS SNAPSHOT
-
-    // get ads snapshot before ad ID
-    // snapshots have id of latest included events
-    async getAdsSnapshotBeforeID(adsID) {
-      let query = { latestAdId: { $lt: adsID }}
-      if ( adsID == 'infinity' ) {
-          query = {$query:{},$orderby:{latestAdId:-1}}
-      }
-      const [res, err] = await this.tryCatch(
-        async () => await this.state.findOne(query))
+    let [res, err] = await this.tryCatch(
+      async () => await this.ads
+        .find(myquery)
+        .limit(this.conf.imagesBatchSize))
+    if (res) {
       return res
+    } else {
+      return []
     }
+  }
 
-    async getEarliestAdIdAfterTimestamp( adsSnapshot.getLatestAdDownloadTimestamp()
-    async getAdsFromID(adsSnapshot.getLatestAdID())
-    async saveAdsSnapshot(newSnapshot)
+  // saves downloaded and processed images 
+  async appendImagesToAds(ads) {
+    // prepare bulkwrite array
+    let operations = []
+    for (ad of ads) {
+      operations.push({
+        updateOne: {
+          "filter": { ID: ad.ID },
+          "update": { $set: ad.updates }
+        }
+      })
+    }
+    // bulk write
+    let [res, err] = [null, null]
+    if (operations.length > 0) {
+      [res, err] = await this.tryCatch(
+        async () => await this.ads.bulkWrite(operations, { ordered: false }))
+    }
+    if (res && Object.hasOwn(res, 'modifiedCount') && res.modifiedCount > 0) {
+      return res.modifiedCount
+    } else {
+      return 0
+    }
+  }
 
 
-    // CONSTRUCT BUY SELL SNAPSHOT 
+  // CONSTRUCT ADS SNAPSHOT
 
-    async getLatestBuySellSnapshot()
-    async getTransactionsFromID(buySellSnapshot.getLatestTransactionID())
-    async saveBuySellSnapshot(newSnapshot)
-    async getAdsSnapshotBeforeID('infinity')
+  // get ads snapshot before ad ID
+  // snapshots have id of latest included events
+  async getAdsSnapshotBeforeID(adsID) {
+    let query = { latestAdId: { $lt: adsID } }
+    if (adsID == 'infinity') {
+      query = { $query: {}, $orderby: { latestAdId: -1 } }
+    }
+    const [res, err] = await this.tryCatch(
+      async () => await this.state.findOne(query))
+    return res
+  }
+
+  async getEarliestAdIdAfterTimestamp(getLatestAdDownloadTimestamp) { }
+  async getAdsFromID(getLatestAdID)
+  async saveAdsSnapshot(newSnapshot)
+
+
+  // CONSTRUCT BUY SELL SNAPSHOT 
+
+  async getLatestBuySellSnapshot()
+  async getTransactionsFromID(getLatestTransactionID)
+  async saveBuySellSnapshot(newSnapshot)
+  async getAdsSnapshotBeforeID()
 
 // TODO tidy up snapshot records (keep only some limited tail)
 }
