@@ -218,14 +218,49 @@ class DB {
       query = { $query: {}, $orderby: { latestAdId: -1 } }
     }
     const [res, err] = await this.tryCatch(
-      async () => await this.state.findOne(query))
+      async () => await this.adsSnapshots.findOne(query))
     return res
   }
 
-  async getEarliestAdIdAfterTimestamp(getLatestAdDownloadTimestamp) { }
-  async getAdsFromID(getLatestAdID)
-  async saveAdsSnapshot(newSnapshot)
+  // finds the earliest ad Id after provided image download timestamp
+  // is required to add laggards to snaphot (images that were downloaded on retries)
+  async getEarliestAdIdAfterTimestamp(latestAdDownloadTimestamp) {
+    let query = { downloadTimestamp: { $gt: latestAdDownloadTimestamp } }
+    let fullQuery = { $query: query, $orderby: { ID: 1 } }
+    const [res, err] = await this.tryCatch(
+      async () => await this.ads.findOne(fullQuery))
 
+    // findOne will return null if there's no match
+    if (res && Object.hasOwn(res, 'ID')) {
+      return res.ID
+    } else {
+      return null
+    }
+   }
+
+  // retrieve ads starting from ID
+  async getAdsFromID(adID) {
+    let query = { ID: { $gt: adID } }
+    let fullQuery = { $query: query, $orderby: { ID: 1 } }
+    const [res, err] = await this.tryCatch(
+      async () => await this.ads.find(fullQuery))
+    if (res) {
+      return res
+    } else {
+      return []
+    }
+  }
+
+  async saveAdsSnapshot(newSnapshot) { 
+    const [res, err] = await this.tryCatch(
+      async () => await this.adsSnapshots.insertOne(newSnapshot))
+
+    if (res && Object.hasOwn(res, 'insertedCount') && res.insertedCount == 1) {
+      return true
+    } else {
+      return false
+    }
+  }
 
   // CONSTRUCT BUY SELL SNAPSHOT 
 

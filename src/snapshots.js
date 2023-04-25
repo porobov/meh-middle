@@ -40,6 +40,7 @@ class AdsSnapshot {
         })
         this.linksMapJSON = buildLinksMapJSON(this.previousSnapshot.linksMapJSON, ad)
         this.latestAdId = ad.ID
+        this.latestDownloadTimestamp = ad.downloadTimestamp
     }
 
     gotOverlays() {
