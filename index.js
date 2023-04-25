@@ -56,11 +56,15 @@ async function mainLoop() {
     // NEWIMAGES
 
     let fromBlock = await db.getLatestBlockForEvent(NEW_IMAGE_EVENT_NAME)
-    logger.info(`${ NEW_IMAGE_EVENT_NAME } event latest block in DB is ${fromBlock}`)
+    if ( fromBlock == null ) { return }
     
     // get events
     let newEvents = await contract.getEvents(NEW_IMAGE_EVENT_NAME, fromBlock)
-    logger.info(`Received ${newEvents.decodedEvents.length} new events till block ${newEvents.blockNumber}`)
+    logger.info(
+        `Received ${newEvents.decodedEvents.length} 
+        new ${ NEW_IMAGE_EVENT_NAME } events 
+        from block ${ fromBlock } to ${newEvents.blockNumber}`)
+
     const formatedEvents = newEvents.decodedEvents.map(ev => {
       return {
         ID: ev.ID.toNumber(),
@@ -90,6 +94,7 @@ async function mainLoop() {
 
     // get latest block for events
     let buySellFromBlock = await db.getLatestBlockForEvent(BUY_SELL_EVENT_NAME)
+    if ( buySellFromBlock == null ) { return }
     
     // get events
     let buySellEvents = await contract.getEvents(BUY_SELL_EVENT_NAME, buySellFromBlock)

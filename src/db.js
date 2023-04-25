@@ -92,46 +92,49 @@ class DB {
     }
 
     async saveLatestBlockForEvent(eventName, latestBlock) {
-      // TODO return only result, log error here
         var myquery = { state_id: this.tempStateId };
         var newvalues = { $set: { [this.recordNameForEvent(eventName)]: latestBlock} };
         const [ saveResult, err ] = await this.tryCatch(
           async () => await this.state.updateOne(myquery, newvalues))
         if (saveResult && Object.hasOwn(saveResult, 'modifiedCount') && saveResult.modifiedCount == 1) {
-          return [true, err]
+          return true
         } else {
-          return [false, err]
+          return false
         }
     }
 
-    async getLatestBlockForEvent(eventName) {
-        var myquery = { state_id: this.tempStateId };
-        // TODO return null on error 
-        // TODO do not return error, just log it right here
-        // db ensures there's 0 value for the first run
-        return await this.tryCatch(
-          async () => (await this.state.findOne(myquery))[this.recordNameForEvent(eventName)])
-    }
+  async getLatestBlockForEvent(eventName) {
+    var myquery = { state_id: this.tempStateId };
+    // db ensures there's 0 value for the first run
+    const [res, err] = await this.tryCatch(
+      async () => (await this.state.findOne(myquery))[this.recordNameForEvent(eventName)])
+    return res  // will return null on error and log error
+  }
 
     // SAVING EVENTS
 
+    async addAdsEvents(decodedEvents) {
+      return await _addEvents(decodedEvents, this.ads)
+    }
+
+    async addBuySellEvents(decodedEvents) {
+      return await _addEvents(decodedEvents, this.buySells)
+    }
 
     // will put events into db
-    async addAdsEvents(decodedEvents) {
-      // TODO return only result. log error here
+    async _addEvents(decodedEvents, collection) {
       const [res, err] = await this.tryCatch(
-        async () => await this.ads.insertMany(decodedEvents, { ordered: false }))
+        async () => await collection.insertMany(decodedEvents, { ordered: false }))
       if (err && Object.hasOwn(err, 'code') && err.code === 11000) {
         logger.info('Duplicate key error');
       } 
       if (res) {
         const count = Object.hasOwn(res, 'insertedCount') ? res.insertedCount : 0
-        return [count, err]
+        return count
       } else {
-        return [0, err]
+        return 0
       }
     }
-
 
     // PREPARE DATA FOR ADS SNAPSHOT
 
@@ -191,7 +194,6 @@ class DB {
 
     // CONSTRUCT ADS SNAPSHOT
 
-    async addBuySellEvents(formatedBuySellEvents) {}
     async getAdsSnapshotBeforeID('infinity')
     async getEarliestAdIdAfterTimestamp( adsSnapshot.getLatestAdDownloadTimestamp()
     async getAdsFromID(adsSnapshot.getLatestAdID())
