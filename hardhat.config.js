@@ -10,6 +10,7 @@ module.exports = {
     dbName: "test",
     newImageEventName: "NewImage",
     buySellEventName: "NewAreaStatus",
+    imagesBatchSize: 2, // number of ads images downloaded within one cycle
   },
   solidity: "0.8.18",
 	defaultNetwork: "localhost",

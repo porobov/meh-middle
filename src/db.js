@@ -157,12 +157,11 @@ class DB {
       let [res, err ] = await this.tryCatch(
         async () => await this.ads
           .find(myquery)
-          .limit(IMAGES_BATCH_SIZE)
-          .toArray())
-      if (res && Array.isArray(res)) {
-        return [res, err]
+          .limit(this.conf.imagesBatchSize))
+      if (res) {
+        return res
       } else {
-        return [[], err]
+        return []
       }
     }
 

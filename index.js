@@ -130,7 +130,7 @@ async function mainLoop() {
 
     // get ads with no images (not downloaded)
     let ads = await db.getAdsNoImages()
-    logger.info(`Got ${ads.length} ads with no images.`)
+    logger.info(`Got ${ads.count()} ads with no images.`)
 
     // download images and save to db
     let wg = new WebGateway()
