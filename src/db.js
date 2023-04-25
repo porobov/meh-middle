@@ -24,28 +24,20 @@ class DB {
         this.conf = conf
     }
 
-    async connect(dbName) {
-        const [res, err] = await this.tryCatch(async () => await this.client.connect())
-        if (!err) {
-          this.db = this.client.db(this.conf.dbName)
-          // initialize collections
-          this.state = this.db.collection("state")
-          this.ads = this.db.collection("ads")
-          this.buySells = this.db.collection("buySells")
-          this.adsSnapshots = this.db.collection("adsSnapshots")
-          this.buySellSnapshots = this.db.collection("buySellSnapshots")
-          // record id for current state
-          this.tempStateId = this.conf.stateRecordName
-
-          // check that DB is initialized correctly 
-          const allCollections = [this.state, this.ads, this.buySells, this.adsSnapshots, this.buySellSnapshots]
-          for (const collection of allCollections) {
-            if ( this.isEmptyCollection(collection) ) {
-              throw new Error(`Got empty collection please run createDB.js script first`)
-            }
-          }
-        }
+  async connect(dbName) {
+    const [res, err] = await this.tryCatch(async () => await this.client.connect())
+    if (!err) {
+      this.db = this.client.db(this.conf.dbName)
+      // initialize collections
+      this.state = this.db.collection("state")
+      this.ads = this.db.collection("ads")
+      this.buySells = this.db.collection("buySells")
+      this.adsSnapshots = this.db.collection("adsSnapshots")
+      this.buySellSnapshots = this.db.collection("buySellSnapshots")
+      // record id for current state
+      this.tempStateId = this.conf.stateRecordName
     }
+  }
     
     async close() {
         const [res, err] = await this.tryCatch(async () => await this.client.close())
@@ -67,7 +59,7 @@ class DB {
 
     // drop collection if it exists
     async dropCollection(collection) {
-      if (await this.isEmptyCollection(collection)> 0) {
+      if ( !(await this.isEmptyCollection(collection)) ) {
         collection.drop()
         logger.info(`Dropped collection ${ collection.name }`) // TODO find .name method
       }
@@ -96,10 +88,7 @@ class DB {
       for (const collection of [this.ads, this.buySells, this.adsSnapshots, this.buySellSnapshots]) {
         await this.createCollectionWithUniqueID(collection)
       }
-    }
-
-    recordNameForEvent(eventName) {
-        return "latestBlockFor" + eventName
+      await this.flagDbCreation()
     }
 
     async saveLatestBlockForEvent(eventName, latestBlock) {
