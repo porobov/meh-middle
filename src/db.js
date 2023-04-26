@@ -86,7 +86,7 @@ class DB {
   // snapshot to be returned when there are no snapshots yet
   async createEmptyAdsSnapshot() {
     let emptySnapshot = {
-      latestAdId: 0, // this is also unique ID of the snapshot
+      latestEventId: 0, // this is also unique ID of the snapshot
       bigPicUrl: null,
       bigPicBinary: null,
       linksMapJSON: '[]'
@@ -207,19 +207,46 @@ class DB {
     }
   }
 
+  // SNAPSHOTS
+
+  async _getSnapshotBeforeID(collection, ID) {
+    let query = { latestEventId: { $lt: ID } }
+    if (adsID == 'infinity') {
+      query = { $query: {}, $orderby: { latestEventId: -1 } }
+    }
+    const [res, err] = await this.tryCatch(
+      async () => await collection.findOne(query))
+    return res
+  }
+
+  async _getEventsFromID(collection, ID) {
+    let query = { ID: { $gt: ID } }
+    let fullQuery = { $query: query, $orderby: { ID: 1 } }
+    const [res, err] = await this.tryCatch(
+      async () => await collection.find(fullQuery))
+    if (res) {
+      return res
+    } else {
+      return []
+    }
+  }
+
+  async _saveSnapshot(collection, newSnapshot) { 
+    const [res, err] = await this.tryCatch(
+      async () => await collection.insertOne(newSnapshot))
+    if (res && Object.hasOwn(res, 'insertedCount') && res.insertedCount == 1) {
+      return true
+    } else {
+      return false
+    }
+  }
 
   // CONSTRUCT ADS SNAPSHOT
 
   // get ads snapshot before ad ID
   // snapshots have id of latest included events
   async getAdsSnapshotBeforeID(adsID) {
-    let query = { latestAdId: { $lt: adsID } }
-    if (adsID == 'infinity') {
-      query = { $query: {}, $orderby: { latestAdId: -1 } }
-    }
-    const [res, err] = await this.tryCatch(
-      async () => await this.adsSnapshots.findOne(query))
-    return res
+    return _getSnapshotBeforeID(this.adsSnapshots, adsID)
   }
 
   // finds the earliest ad Id after provided image download timestamp
@@ -239,35 +266,27 @@ class DB {
    }
 
   // retrieve ads starting from ID
-  async getAdsFromID(adID) {
-    let query = { ID: { $gt: adID } }
-    let fullQuery = { $query: query, $orderby: { ID: 1 } }
-    const [res, err] = await this.tryCatch(
-      async () => await this.ads.find(fullQuery))
-    if (res) {
-      return res
-    } else {
-      return []
-    }
+  async getAdsFromID(ID) {
+    return _getEventsFromID(this.ads, ID)
   }
 
   async saveAdsSnapshot(newSnapshot) { 
-    const [res, err] = await this.tryCatch(
-      async () => await this.adsSnapshots.insertOne(newSnapshot))
-
-    if (res && Object.hasOwn(res, 'insertedCount') && res.insertedCount == 1) {
-      return true
-    } else {
-      return false
-    }
+    return _saveSnapshot(this.adsSnapshots, newSnapshot)
   }
 
   // CONSTRUCT BUY SELL SNAPSHOT 
 
-  async getLatestBuySellSnapshot()
-  async getTransactionsFromID(getLatestTransactionID)
-  async saveBuySellSnapshot(newSnapshot)
-  async getAdsSnapshotBeforeID()
+  async getLatestBuySellSnapshot() {
+    return _getSnapshotBeforeID(this.buySellSnapshots, 'infinity')
+  }
+
+  async getTransactionsFromID(latestTransactionID) {
+    return _getEventsFromID(this.ads, latestTransactionID)
+  }
+
+  async saveBuySellSnapshot(newSnapshot) {
+    return _saveSnapshot(this.buySellSnapshots, newSnapshot)
+  }
 
 // TODO tidy up snapshot records (keep only some limited tail)
 }

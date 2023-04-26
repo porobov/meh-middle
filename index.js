@@ -179,7 +179,7 @@ async function mainLoop() {
     // getting earliest ad snapshot 
     const snapshotOptions = { defaultBgPath: DEFAULT_BG_PATH }
     let previousSnapshot = await db.getAdsSnapshotBeforeID('infinity')
-    if (previousSnapshot == null) { return }
+    if (previousSnapshot == null) { return }  // can happen on error
     const adsSnapshot = new AdsSnapshot( previousSnapshot, snapshotOptions )
 
     // checking if got timestamp higher than of the snapshot, but with lower ID
@@ -187,7 +187,7 @@ async function mainLoop() {
     // (relevant to images that were uploaded after retries)
     const earliestID = await db.getEarliestAdIdAfterTimestamp(
         adsSnapshot.getLatestAdDownloadTimestamp())
-    if (earliestID < adsSnapshot.getLatestAdID()) {
+    if (earliestID && earliestID < adsSnapshot.getLatestAdID()) {
         let prevSnapshot = await db.getAdsSnapshotBeforeID(earliestID)
         if (prevSnapshot == null) { return }
         adsSnapshot = new AdsSnapshot(prevSnapshot, snapshotOptions)
@@ -202,32 +202,32 @@ async function mainLoop() {
     // save new snapshot to db (saving only fully processed snapshots)
     if ( adsSnapshot.gotOverlays() ) {
         const newSnapshot =  {
-            latestAdId: adsSnapshot.getLatestAdID(), // TODO return 0 if err
+            latestEventId: adsSnapshot.getLatestAdID(), // TODO return 0 if err
             linksMapJSON: adsSnapshot.getLinksMapJSON(),  // TODO return '[]' if err
             bigPicBinary: await adsSnapshot.getMergedBigPic(),  // TODO return null if err
             adsBigPicUrl: await uploader.uploadAdsSnapshotPic(bigPicBinary) // return url or nulladsBigPicUrl
         }
         // check snapshot validity (important as we are not catching upload errors)
         if (
-            newSnapshot.latestAdId > 0
+            newSnapshot.latestEventId > 0
             && newSnapshot.linksMapJSON != '[]'
             && newSnapshot.bigPicBinary != null
             && newSnapshot.adsBigPicUrl != null
         ) {
             if (await db.saveAdsSnapshot(newSnapshot)) {
-                logger.info(`Saved snapshot with latest ad ID: ${newSnapshot.latestAdId}`)
+                logger.info(`Saved snapshot with latest ad ID: ${newSnapshot.latestEventId}`)
             }
         } else {
-            logger.error(`Snapshot got overlays, but some values are null. Latest buySell ID: ${newSnapshot.latestAdId}`)
+            logger.error(`Snapshot got overlays, but some values are null. Latest buySell ID: ${newSnapshot.latestEventId}`)
         }
     }
 
 
     // CONSTRUCT BUY SELL SNAPSHOT 
 
-    const buySellSnapshot = new BuySellSnapshot(
-        await db.getLatestBuySellSnapshot(), 
-        )
+    const previousBSSnapshot = await db.getLatestBuySellSnapshot()
+    if (previousBSSnapshot == null) { return }  // can happen on error
+    const buySellSnapshot = new BuySellSnapshot(previousBSSnapshot)
 
     // retrieve events with higher ID, sorted  by ID
     // (returns cursor)
@@ -244,7 +244,10 @@ async function mainLoop() {
             ownershipMapJSON: buySellSnapshot.getOwnershipMapJSON(),  //  TODO '[]' if err
         }
         // Check values 
-        if (newSnapshot.latestBuySellId != null && newSnapshot.ownershipMapJSON != '[]') {
+        if (
+            newSnapshot.latestBuySellId != null 
+            && newSnapshot.ownershipMapJSON != '[]'
+        ) {
             if (await db.saveBuySellSnapshot(newSnapshot)) {
                 logger.info(`Saved buySell snapshot. Latest buySell ID: ${ newSnapshot.latestBuySellId }`)
             }

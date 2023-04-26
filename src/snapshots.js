@@ -20,11 +20,11 @@ class AdsSnapshot {
     constructor(previousSnapshot, options) {
         this.defaultBgPath = options.defaultBgPath
         this.overlays = []
-        this.latestAdId = this.previousSnapshot.latestAdId
+        this.latestEventId = this.previousSnapshot.latestEventId
     }
 
     getLatestAdID(){
-        return this.latestAdId
+        return this.latestEventId
     }
 
     // overlays an ad over given snapshot
@@ -39,7 +39,7 @@ class AdsSnapshot {
             left: (ad.fromX - 1) * 10
         })
         this.linksMapJSON = buildLinksMapJSON(this.previousSnapshot.linksMapJSON, ad)
-        this.latestAdId = ad.ID
+        this.latestEventId = ad.ID
         this.latestDownloadTimestamp = ad.downloadTimestamp
     }
 
