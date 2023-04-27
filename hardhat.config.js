@@ -11,6 +11,7 @@ module.exports = {
     newImageEventName: "NewImage",
     buySellEventName: "NewAreaStatus",
     imagesBatchSize: 2, // number of ads images downloaded within one cycle
+    maxStoredSnapshots: 10, // if more are present in db the earliest will be deleted
   },
   solidity: "0.8.18",
 	defaultNetwork: "localhost",

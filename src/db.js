@@ -25,7 +25,7 @@ class DB {
   }
 
   async connect(dbName) {
-    const [res, err] = await this.tryCatch(async () => await this.client.connect())
+    const [res, err] = await tryCatch(async () => await this.client.connect())
     if (!err) {
       this.db = this.client.db(this.conf.dbName)
       // initialize collections
@@ -40,7 +40,7 @@ class DB {
   }
 
   async close() {
-    const [res, err] = await this.tryCatch(async () => await this.client.close())
+    const [res, err] = await tryCatch(async () => await this.client.close())
   }
 
 
@@ -48,7 +48,7 @@ class DB {
 
   // checking if collection is empty
   async isEmptyCollection(collection) {
-    const [res, err] = await this.tryCatch(
+    const [res, err] = await tryCatch(
       async () => await collection.find().limit(1).toArray())
     if (res.length > 0) {
       return true
@@ -91,7 +91,7 @@ class DB {
       bigPicBinary: null,
       linksMapJSON: '[]'
     }
-    const [res, err] = await this.tryCatch(
+    const [res, err] = await tryCatch(
       async () => await collection.insertOne(emptySnapshot))
   }
 
@@ -108,7 +108,7 @@ class DB {
   async saveLatestBlockForEvent(eventName, latestBlock) {
     var myquery = { state_id: this.tempStateId };
     var newvalues = { $set: { [this.recordNameForEvent(eventName)]: latestBlock } };
-    const [saveResult, err] = await this.tryCatch(
+    const [saveResult, err] = await tryCatch(
       async () => await this.state.updateOne(myquery, newvalues))
     if (saveResult && Object.hasOwn(saveResult, 'modifiedCount') && saveResult.modifiedCount == 1) {
       return true
@@ -120,7 +120,7 @@ class DB {
   async getLatestBlockForEvent(eventName) {
     var myquery = { state_id: this.tempStateId };
     // db ensures there's 0 value for the first run
-    const [res, err] = await this.tryCatch(
+    const [res, err] = await tryCatch(
       async () => (await this.state.findOne(myquery))[this.recordNameForEvent(eventName)])
     return res  // will return null on error and log error
   }
@@ -137,7 +137,7 @@ class DB {
 
   // will put events into db
   async _addEvents(decodedEvents, collection) {
-    const [res, err] = await this.tryCatch(
+    const [res, err] = await tryCatch(
       async () => await collection.insertMany(decodedEvents, { ordered: false }))
     if (err && Object.hasOwn(err, 'code') && err.code === 11000) {
       logger.info('Duplicate key error');
@@ -153,8 +153,6 @@ class DB {
 
   // returns ads with no downloaded images 
   async getAdsNoImages() {
-    // TODO return cursor
-    // TODO if error return empty array and log error here
     var myquery =
     {
       $and: [
@@ -171,7 +169,7 @@ class DB {
         { imageForPixelMap: { $exists: false } }
       ]
     }
-    let [res, err] = await this.tryCatch(
+    let [res, err] = await tryCatch(
       async () => await this.ads
         .find(myquery)
         .limit(this.conf.imagesBatchSize))
@@ -197,7 +195,7 @@ class DB {
     // bulk write
     let [res, err] = [null, null]
     if (operations.length > 0) {
-      [res, err] = await this.tryCatch(
+      [res, err] = await tryCatch(
         async () => await this.ads.bulkWrite(operations, { ordered: false }))
     }
     if (res && Object.hasOwn(res, 'modifiedCount') && res.modifiedCount > 0) {
@@ -214,7 +212,7 @@ class DB {
     if (adsID == 'infinity') {
       query = { $query: {}, $orderby: { latestEventId: -1 } }
     }
-    const [res, err] = await this.tryCatch(
+    const [res, err] = await tryCatch(
       async () => await collection.findOne(query))
     return res
   }
@@ -222,7 +220,7 @@ class DB {
   async _getEventsFromID(collection, ID) {
     let query = { ID: { $gt: ID } }
     let fullQuery = { $query: query, $orderby: { ID: 1 } }
-    const [res, err] = await this.tryCatch(
+    const [res, err] = await tryCatch(
       async () => await collection.find(fullQuery))
     if (res) {
       return res
@@ -231,9 +229,16 @@ class DB {
     }
   }
 
-  async _saveSnapshot(collection, newSnapshot) { 
-    const [res, err] = await this.tryCatch(
-      async () => await collection.insertOne(newSnapshot))
+  async _saveSnapshot(collection, newSnapshot) {
+    const [res, err] = await tryCatch(
+      async () => {
+        // remove stale snapshot (one in - one out)
+        const count = await collection.countDocuments()
+        if (count > this.conf.maxStoredSnapshots) {
+          collection.findOneAndDelete({}, { sort: { latestEventId: 1 } })
+        }
+        return await collection.insertOne(newSnapshot)
+      })
     if (res && Object.hasOwn(res, 'insertedCount') && res.insertedCount == 1) {
       return true
     } else {
@@ -254,7 +259,7 @@ class DB {
   async getEarliestAdIdAfterTimestamp(latestAdDownloadTimestamp) {
     let query = { downloadTimestamp: { $gt: latestAdDownloadTimestamp } }
     let fullQuery = { $query: query, $orderby: { ID: 1 } }
-    const [res, err] = await this.tryCatch(
+    const [res, err] = await tryCatch(
       async () => await this.ads.findOne(fullQuery))
 
     // findOne will return null if there's no match
@@ -267,25 +272,25 @@ class DB {
 
   // retrieve ads starting from ID
   async getAdsFromID(ID) {
-    return _getEventsFromID(this.ads, ID)
+    return this._getEventsFromID(this.ads, ID)
   }
 
   async saveAdsSnapshot(newSnapshot) { 
-    return _saveSnapshot(this.adsSnapshots, newSnapshot)
+    return this._saveSnapshot(this.adsSnapshots, newSnapshot)
   }
 
   // CONSTRUCT BUY SELL SNAPSHOT 
 
   async getLatestBuySellSnapshot() {
-    return _getSnapshotBeforeID(this.buySellSnapshots, 'infinity')
+    return this._getSnapshotBeforeID(this.buySellSnapshots, 'infinity')
   }
 
   async getTransactionsFromID(latestTransactionID) {
-    return _getEventsFromID(this.ads, latestTransactionID)
+    return this._getEventsFromID(this.ads, latestTransactionID)
   }
 
   async saveBuySellSnapshot(newSnapshot) {
-    return _saveSnapshot(this.buySellSnapshots, newSnapshot)
+    return this._saveSnapshot(this.buySellSnapshots, newSnapshot)
   }
 
 // TODO tidy up snapshot records (keep only some limited tail)
