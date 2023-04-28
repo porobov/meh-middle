@@ -86,23 +86,33 @@ class DB {
   // snapshot to be returned when there are no snapshots yet
   async createEmptyAdsSnapshot() {
     let emptySnapshot = {
+      // also see snapshot validity check 
       latestEventId: 0, // this is also unique ID of the snapshot
       bigPicUrl: null,
       bigPicBinary: null,
       linksMapJSON: '[]'
     }
     const [res, err] = await tryCatch(
-      async () => await collection.insertOne(emptySnapshot))
+      async () => await this.adsSnapshots.insertOne(emptySnapshot))
   }
 
+  async createEmptyBuySellSnapshot() {
+    let emptySnapshot = {
+      // also see snapshot validity check 
+      latestTransactionID: 0,
+      ownershipMapJSON: '[]'
+    }
+    const [res, err] = await tryCatch(
+      async () => await this.buySellSnapshots.insertOne(emptySnapshot))
+  }
 
   async createDB() {
     await this.createEmptyStateRecord()
     for (const collection of [this.ads, this.buySells, this.adsSnapshots, this.buySellSnapshots]) {
       await this.createCollectionWithUniqueID(collection)
     }
-    await this.flagDbCreation()
     await createEmptyAdsSnapshot()
+    await createEmptyBuySellSnapshot()
   }
 
   async saveLatestBlockForEvent(eventName, latestBlock) {

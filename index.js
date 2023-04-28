@@ -202,12 +202,13 @@ async function mainLoop() {
     // save new snapshot to db (saving only fully processed snapshots)
     if ( adsSnapshot.gotOverlays() ) {
         const newSnapshot =  {
-            latestEventId: adsSnapshot.getLatestAdID(), // TODO return 0 if err
-            linksMapJSON: adsSnapshot.getLinksMapJSON(),  // TODO return '[]' if err
-            bigPicBinary: await adsSnapshot.getMergedBigPic(),  // TODO return null if err
-            adsBigPicUrl: await uploader.uploadAdsSnapshotPic(bigPicBinary) // return url or nulladsBigPicUrl
+            latestEventId: adsSnapshot.getLatestAdID(),
+            linksMapJSON: adsSnapshot.getLinksMapJSON(),
+            bigPicBinary: await adsSnapshot.getMergedBigPic(),
+            adsBigPicUrl: await uploader.uploadAdsSnapshotPic(bigPicBinary)
         }
         // check snapshot validity (important as we are not catching upload errors)
+        // these are zero snapshot params (see db)
         if (
             newSnapshot.latestEventId > 0
             && newSnapshot.linksMapJSON != '[]'
@@ -240,10 +241,11 @@ async function mainLoop() {
     if ( buySellSnapshot.gotOverlays() ) {
         // upload big pic and links map
         const newSnapshot =  {
-            latestBuySellId: buySellSnapshot.getLatestTransactionID(),  //  TODO null if err
-            ownershipMapJSON: buySellSnapshot.getOwnershipMapJSON(),  //  TODO '[]' if err
+            latestBuySellId: buySellSnapshot.getLatestTransactionID(),
+            ownershipMapJSON: buySellSnapshot.getOwnershipMapJSON(),
         }
-        // Check values 
+        // check snapshot validity (important as we are not catching upload errors)
+        // these are zero snapshot params (see db)
         if (
             newSnapshot.latestBuySellId != null 
             && newSnapshot.ownershipMapJSON != '[]'

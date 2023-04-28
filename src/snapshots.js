@@ -1,26 +1,30 @@
 const { ImageEditor } = require("./src/imageEditor.js")
 
-function buildLinksMapJSON(linksMapJSON, newAd) {
-    let parsedLinksMap = JSON.parse(linksMapJSON)
-    for (let x = newAd.fromX; x = newAd.toX; x++ ) {
-        for (let y = newAd.fromY; y = newAd.toY; y++ ) {
-            parsedLinksMap[x][y] = {
-                adText: newAd.adText,
-                adUrl: newAd.adUrl,
-                imageSourceUrl: newAd.imageSourceUrl
-            }
-        }
-    }
-    return JSON.stringify(parsedLinksMap)
-}
+
 class AdsSnapshot {
 
     // construct from the same fields as in export (retrieved from db)
     // expects an empty object if no snapshots exist yet
     constructor(previousSnapshot, options) {
+        this.latestEventId = previousSnapshot.latestEventId
+        this.linksMapJSON = previousSnapshot.linksMapJSON
+        this.bgBinary = previousSnapshot.bigPicBinary
         this.defaultBgPath = options.defaultBgPath
         this.overlays = []
-        this.latestEventId = this.previousSnapshot.latestEventId
+    }
+
+    _addToLinksMapJSON(linksMapJSON, newAd) {
+        let parsedLinksMap = JSON.parse(linksMapJSON)
+        for (let x = newAd.fromX; x = newAd.toX; x++ ) {
+            for (let y = newAd.fromY; y = newAd.toY; y++ ) {
+                parsedLinksMap[x][y] = {
+                    adText: newAd.adText,
+                    adUrl: newAd.adUrl,
+                    imageSourceUrl: newAd.imageSourceUrl
+                }
+            }
+        }
+        return JSON.stringify(parsedLinksMap)
     }
 
     getLatestAdID(){
@@ -38,7 +42,7 @@ class AdsSnapshot {
             top: (ad.fromY - 1) * 10,
             left: (ad.fromX - 1) * 10
         })
-        this.linksMapJSON = buildLinksMapJSON(this.previousSnapshot.linksMapJSON, ad)
+        this.linksMapJSON = this._addToLinksMapJSON(this.linksMapJSON, ad)
         this.latestEventId = ad.ID
         this.latestDownloadTimestamp = ad.downloadTimestamp
     }
@@ -51,12 +55,12 @@ class AdsSnapshot {
     async getMergedBigPic(){
         if (!this.mergedBigPic) {
             let ie = new ImageEditor({})
-            if (!this.previousSnapshot.bigPicBinary) {
-                this.previousSnapshot.bigPicBinary =
+            if (!this.bgBinary) {
+                this.bgBinary =
                     await ie.createBackgroundImage(this.defaultBgPath)
             }
             this.mergedBigPic = await ie.overlayAd(
-                this.previousSnapshot.bigPicBinary,
+                this.bgBinary,
                 this.overlays
             )
         }
@@ -72,16 +76,11 @@ class BuySellSnapshot {
     constructor(previousSnapshot) {
         this.isMerged = false
         this._gotOverlays = false
-        if ( Object.hasOwn(previousSnapshot, "latestTransactionID") ) {
-            this.latestTransactionID = previousSnapshot.latestTransactionID
-            this.ownershipMapJSON = previousSnapshot.ownershipMapJSON
-        } else {
-            this.latestTransactionID = 0 
-            this.ownershipMapJSON = '[]'
-        }
+        this.latestTransactionID = previousSnapshot.latestTransactionID
+        this.ownershipMapJSON = previousSnapshot.ownershipMapJSON
     }
 
-    _appendToOwnershipMapJSON(ownershipMapJSON, buySellTx) {
+    _addToOwnershipMapJSON(ownershipMapJSON, buySellTx) {
         let parsedOwnershipMap = JSON.parse(ownershipMapJSON)
         for (let x = buySellTx.fromX; x = buySellTx.toX; x++ ) {
             for (let y = buySellTx.fromY; y = buySellTx.toY; y++ ) {
@@ -96,7 +95,7 @@ class BuySellSnapshot {
     overlay(buySellTx) {
         if (this.isMerged) {
             throw new Error("Cannot overlay - merged already")}
-        this.ownershipMapJSON = this._appendToOwnershipMapJSON(
+        this.ownershipMapJSON = this._addToOwnershipMapJSON(
             this.ownershipMapJSON,
             buySellTx)
         this._gotOverlays = true

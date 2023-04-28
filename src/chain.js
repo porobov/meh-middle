@@ -6,6 +6,7 @@ class MillionEther {
     this.contractName = contractName
   }
 
+  // TODO add try catch
   async getEvents(eventName, fromBlock) {
     // TODO log error. return empty decodedEvents array if something is wrong
     // TODO return 0 block height if something is worng
