@@ -32,7 +32,7 @@ class WebGateway {
     }
   }
 
-  saveImageBufferToDisk(imageBuffer, filename) {
+  _saveImageBufferToDisk(imageBuffer, filename) {
     // const path = Path.resolve(__dirname, imageName, imageFormat)
     // const writer = fs.createWriteStream(path)
     fs.writeFileSync(filename, imageBuffer, 'binary', (err) => {
@@ -41,8 +41,8 @@ class WebGateway {
     });
   }
 
-  async getImageSize(url) {
-    return ufs(url)
+  async _getImageSize(url) {
+    return await ufs(url)
   }
 }
 module.exports = {

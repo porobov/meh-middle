@@ -6,7 +6,7 @@ require("dotenv").config();
 module.exports = {
   dbConf: {  // TODO rename to some other conf name
     stateRecordName: "two",  // a single record in state collection is responsible for state
-    dbAccessUrl: "mongodb+srv://upala-express:1l42hOuMYBVAjfte@cluster0.xix8e.mongodb.net/test?retryWrites=true&w=majority&useNewUrlParser=true&useUnifiedTopology=true",
+    dbAccessUrl: process.env.MONGO_ACCESS_URL !== undefined ? process.env.MONGO_ACCESS_URL : "",
     dbName: "test",
     newImageEventName: "NewImage",
     buySellEventName: "NewAreaStatus",
