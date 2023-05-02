@@ -6,19 +6,16 @@ const { ImageEditor } = require("./src/imageEditor.js")
 const { AdsSnapshot, BuySellSnapshot } = require("./src/snapshots.js")
 const { logger } = require("./src/logger.js");
 
-// TODO tidy up configs
-NEXT_RETRY_DELAY = 1000 * 60 * 5 // 5 minutes - will retry to download. Next attempt will be twice long
-MAX_NUM_OF_DOWNLOAD_ATTEMPTS = 5  // number of download attempts for image
-STATUSCODES_ALLOWING_RETRY = [ 408, 502, 503, 504, 429 ]  // downloader will try to download images again
-THUMBNAIL_PARAMS = {
-    width: 400,
-    height: 400
-}
-DEFAULT_BG_PATH = "./static/bg.png" // path to bg image for pixelmap
-const NEW_IMAGE_EVENT_NAME = hre.config.dbConf.newImageEventName
-const BUY_SELL_EVENT_NAME = hre.config.dbConf.buySellEventName
-const MAIN_LOOP_INTERVAL_MS = 5000  // actually a pause between cycles
-let db = new DB(hre.config.dbConf)
+// config
+const config = hre.config.dbConf
+const MAX_NUM_OF_DOWNLOAD_ATTEMPTS = config.maxNumOfDownloadAttempts
+const STATUSCODES_ALLOWING_RETRY = config.statusCodesAllowingRetry
+const DEFAULT_BG_PATH = config.default_bg_path
+const NEW_IMAGE_EVENT_NAME = config.newImageEventName
+const BUY_SELL_EVENT_NAME = config.buySellEventName
+const MAIN_LOOP_INTERVAL_MS = config.mainLoopIntervalMs
+
+let db = new DB(config)
 
 // analyzes error of image download
 function constructRetryParams(error, numOfTries) {
@@ -30,7 +27,7 @@ function constructRetryParams(error, numOfTries) {
         // try later for the errors above
         const newNumOfTries = numOfTries + 1
         response.numOfTries = newNumOfTries
-        response.nextTryTimestamp = Date.now() + NEXT_RETRY_DELAY * 2 ** (newNumOfTries - 1)
+        response.nextTryTimestamp = Date.now() + config.nextRetryDelay * 2 ** (newNumOfTries - 1)
         // stop trying to download
         if (newNumOfTries >= MAX_NUM_OF_DOWNLOAD_ATTEMPTS) {
             response.failedToDownLoad = true
@@ -135,7 +132,7 @@ async function mainLoop() {
     logger.info(`Got ${ads.count()} ads with no images.`)
 
     // download images and save to db
-    let wg = new WebGateway()
+    let wg = new WebGateway(config)
     for await (const ad of ads) {
         ad.updates = {}
         logger.info(`Downloading image for ad ID ${ad.ID} from ${ad.imageSourceUrl}...`)
@@ -158,7 +155,7 @@ async function mainLoop() {
 
         // resize images
         if ( fullImageBinary ) {
-            let ie = new ImageEditor({ thumbnailParams: THUMBNAIL_PARAMS })
+            let ie = new ImageEditor(config)
             // image for thumbnail will fit configured size
             ad.updates.imageThumb = await ie.getImageThumbBinary(ad) 
             // image for pixelMap will resize ignoring aspect ratio

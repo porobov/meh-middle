@@ -11,6 +11,13 @@ module.exports = {
     buySellEventName: "NewAreaStatus",
     imagesBatchSize: 2, // number of ads images downloaded within one cycle
     maxStoredSnapshots: 10, // if more are present in db the earliest will be deleted
+    supportedFormats: ["jpg", "png", "gif", "tif"], // , "bmp"] // , "jp2", "jpm", "jpx"]
+    nextRetryDelay: 1000 * 60 * 5, // 5 minutes - will retry to download. next attempt will be twice long
+    maxNumOfDownloadAttempts: 5,  // number of download attempts for image
+    statusCodesAllowingRetry: [408, 502, 503, 504, 429],  // downloader will try to download images again
+    thumbnailParams: { width: 400, height: 400 },
+    default_bg_path: "./static/bg.png", // path to bg image for pixelmap
+    mainLoopIntervalMs: 5000,  // actually a pause between cycles
   },
   solidity: "0.8.18",
 	defaultNetwork: "localhost",

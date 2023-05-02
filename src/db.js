@@ -1,7 +1,6 @@
 const { MongoClient } = require("mongodb")
 const chalk = require("chalk")
 const { logger } = require("./logger.js")
-IMAGES_BATCH_SIZE = 2
 
 // try-catch wrapper
 tryCatch = async (tryer) => {
@@ -24,7 +23,7 @@ class DB {
     this.conf = conf
   }
 
-  async connect(dbName) {
+  async connect() {
     const [res, err] = await tryCatch(async () => await this.client.connect())
     if (!err) {
       this.db = this.client.db(this.conf.dbName)
