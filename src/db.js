@@ -81,13 +81,13 @@ class DB {
   }
 
   async createCollectionWithUniqueID(collection) {
-    await this.dropCollection(this.ads)
+    await this.dropCollection(collection)
     logger.info(`Creating collection ${collection.collectionName}`)
     await this.ads.createIndex({ "ID": 1 }, { unique: true })
   }
 
   // snapshot to be returned when there are no snapshots yet
-  async createEmptyAdsSnapshot() {
+  async putEmptyAdsSnapshot() {
     let emptySnapshot = {
       // also see snapshot validity check 
       latestEventId: 0, // this is also unique ID of the snapshot
@@ -97,9 +97,10 @@ class DB {
     }
     const [res, err] = await tryCatch(
       async () => await this.adsSnapshots.insertOne(emptySnapshot))
+    logger.info(`Empty Ads snaphot was recorded to db`)
   }
 
-  async createEmptyBuySellSnapshot() {
+  async putEmptyBuySellSnapshot() {
     let emptySnapshot = {
       // also see snapshot validity check 
       latestTransactionID: 0,
@@ -107,6 +108,7 @@ class DB {
     }
     const [res, err] = await tryCatch(
       async () => await this.buySellSnapshots.insertOne(emptySnapshot))
+    logger.info(`Empty BuySell snaphot was recorded to db`)
   }
 
   async createDB() {
@@ -114,8 +116,8 @@ class DB {
     for (const collection of [this.ads, this.buySells, this.adsSnapshots, this.buySellSnapshots]) {
       await this.createCollectionWithUniqueID(collection)
     }
-    await this.createEmptyAdsSnapshot()
-    await this.createEmptyBuySellSnapshot()
+    await this.putEmptyAdsSnapshot()
+    await this.putEmptyBuySellSnapshot()
   }
 
   async saveLatestBlockForEvent(eventName, latestBlock) {
