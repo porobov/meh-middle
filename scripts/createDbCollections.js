@@ -4,7 +4,7 @@ let db = new DB(hre.config.dbConf)
 
 async function main() {
     await db.connect() 
-    await createDB()
+    await db.createDB()
     await db.close()
 }
 main()

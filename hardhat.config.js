@@ -4,7 +4,7 @@ require("dotenv").config();
 /** @type import('hardhat/config').HardhatUserConfig */
 module.exports = {
   dbConf: { 
-    stateRecordName: "two",  // a single record in state collection is responsible for state
+    stateRecordName: "three",  // a single record in state collection is responsible for state
     dbAccessUrl: process.env.MONGO_ACCESS_URL !== undefined ? process.env.MONGO_ACCESS_URL : "",
     dbName: "test",
     newImageEventName: "NewImage",

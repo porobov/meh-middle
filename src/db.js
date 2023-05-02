@@ -45,11 +45,15 @@ class DB {
 
   // DB SETUP
 
+  recordNameForEvent(eventName) {
+    return "latestBlockFor" + eventName
+  }
+
   // checking if collection is empty
   async isEmptyCollection(collection) {
     const [res, err] = await tryCatch(
       async () => await collection.find().limit(1).toArray())
-    if (res.length > 0) {
+    if (res.length == 0) {
       return true
     } else {
       return false
@@ -110,8 +114,8 @@ class DB {
     for (const collection of [this.ads, this.buySells, this.adsSnapshots, this.buySellSnapshots]) {
       await this.createCollectionWithUniqueID(collection)
     }
-    await createEmptyAdsSnapshot()
-    await createEmptyBuySellSnapshot()
+    await this.createEmptyAdsSnapshot()
+    await this.createEmptyBuySellSnapshot()
   }
 
   async saveLatestBlockForEvent(eventName, latestBlock) {
