@@ -1,5 +1,7 @@
 const { ethers } = require("hardhat")
+const { logger } = require("./logger.js")
 
+const MODULE_NAME = "chain"
 class MillionEther {
   constructor(contractName, contractAddress){
     this.contractAddress = contractAddress
@@ -13,11 +15,11 @@ class MillionEther {
       const eventFilter = contract.filters[eventName]()
       const events = await contract.queryFilter(eventFilter, fromBlock, latestBlock)
       return {
-        decodedEvents: events.args,
+        decodedEvents: events,
         blockNumber: latestBlock
-      }
+      };
     } catch (err) {
-      logger.error(err)
+      logger.error(err, { module: MODULE_NAME })
       return null
     }
   }

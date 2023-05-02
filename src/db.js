@@ -143,11 +143,11 @@ class DB {
   // SAVING EVENTS
 
   async addAdsEvents(decodedEvents) {
-    return await _addEvents(decodedEvents, this.ads)
+    return await this._addEvents(decodedEvents, this.ads)
   }
 
   async addBuySellEvents(decodedEvents) {
-    return await _addEvents(decodedEvents, this.buySells)
+    return await this._addEvents(decodedEvents, this.buySells)
   }
 
   // will put events into db
@@ -266,7 +266,7 @@ class DB {
   // get ads snapshot before ad ID
   // snapshots have id of latest included events
   async getAdsSnapshotBeforeID(adsID) {
-    return _getSnapshotBeforeID(this.adsSnapshots, adsID)
+    return this._getSnapshotBeforeID(this.adsSnapshots, adsID)
   }
 
   // finds the earliest ad Id after provided image download timestamp

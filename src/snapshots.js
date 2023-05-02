@@ -1,4 +1,4 @@
-const { ImageEditor } = require("./src/imageEditor.js")
+const { ImageEditor } = require("./imageEditor.js")
 
 
 class AdsSnapshot {

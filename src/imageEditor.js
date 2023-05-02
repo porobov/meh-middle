@@ -1,6 +1,7 @@
 const sharp = require('sharp');
 const { logger } = require("./logger.js")
 
+const MODULE_NAME = "image-editor"
 function getDimensions(adRecord) {
     return {
         width: (1 + adRecord.toX - adRecord.fromX),
@@ -24,6 +25,7 @@ class ImageEditor {
               .toBuffer(),
               null]
           } catch (err) {
+            logger.error(err, { module: MODULE_NAME })
             return [null, err]
           }
     }
@@ -41,24 +43,26 @@ class ImageEditor {
 
     async getImageThumbBinary(ad) {
       // todo log error here with additional fields
-      return [imageBuffer, error] = await ie.fitInside(
+      const [imageBuffer, error] = await this.fitInside(
         ad.fullImageBinary,
         this.conf.thumbnailParams.width,
         this.conf.thumbnailParams.height,
         'inside',
         true)
+      return imageBuffer
     }
 
     async getImageForPixelMap(ad) {
       // todo log error here with additional fields
       const width = getDimensions(ad).width
       const height = getDimensions(ad).height
-        ;[imageBuffer, error] = await ie.fitInside(
+      const [imageBuffer, error] = await this.fitInside(
           ad.fullImageBinary,
           width,
           height,
           'fill',
           false)
+      return imageBuffer
     }
 }
 

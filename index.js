@@ -60,21 +60,21 @@ async function mainLoop() {
     if ( newEvents == null ) { return }
 
     logger.info(
-        `Received ${newEvents.decodedEvents.length} 
-        new ${ NEW_IMAGE_EVENT_NAME } events 
-        from block ${ fromBlock } to ${newEvents.blockNumber}`)
+`Received ${newEvents.decodedEvents.length} \
+new ${ NEW_IMAGE_EVENT_NAME } events \
+from block ${ fromBlock } to ${newEvents.blockNumber}`)
 
     const formatedEvents = newEvents.decodedEvents.map(ev => {
       return {
-        ID: ev.ID.toNumber(),
+        ID: ev.args.ID.toNumber(),
         // fixing smart contract bug. Coordinates may be mixed up
-        fromX: ev.fromX < ev.toX ? ev.fromX : ev.toX,
-        fromY: ev.fromY < ev.toY ? ev.fromY : ev.toY,
-        toX: ev.toX > ev.fromX ? ev.toX : ev.fromX,
-        toY: ev.toY > ev.fromY ? ev.toY : ev.fromY,
-        adText: ev.adText,
-        adUrl: ev.adUrl,
-        imageSourceUrl: ev.imageSourceUrl,
+        fromX: ev.args.fromX < ev.args.toX ? ev.args.fromX : ev.args.toX,
+        fromY: ev.args.fromY < ev.args.toY ? ev.args.fromY : ev.args.toY,
+        toX: ev.args.toX > ev.args.fromX ? ev.args.toX : ev.args.fromX,
+        toY: ev.args.toY > ev.args.fromY ? ev.args.toY : ev.args.fromY,
+        adText: ev.args.adText,
+        adUrl: ev.args.adUrl,
+        imageSourceUrl: ev.args.imageSourceUrl,
         numOfTries: 0,  // num of download tries for ad image
         failedToDownLoad: false,  // flag. If image failed to download
         nextTryTimestamp: 0,  // next download attempt timestamp
@@ -98,19 +98,19 @@ async function mainLoop() {
     // get events
     let buySellEvents = await contract.getEvents(BUY_SELL_EVENT_NAME, buySellFromBlock)
     logger.info(
-        `Received ${ buySellEvents.decodedEvents.length } 
-        new ${ BUY_SELL_EVENT_NAME } events 
-        from block ${ buySellFromBlock } to ${ buySellEvents.blockNumber }`)
+`Received ${ buySellEvents.decodedEvents.length } /
+new ${ BUY_SELL_EVENT_NAME } events /
+from block ${ buySellFromBlock } to ${ buySellEvents.blockNumber }`)
 
     const formatedBuySellEvents = buySellEvents.decodedEvents.map(ev => {
         return {
-          ID: ev.ID.toNumber(),
+          ID: ev.args.ID.toNumber(),
           // fixing smart contract bug. Coordinates may be mixed up
-          fromX: ev.fromX < ev.toX ? ev.fromX : ev.toX,
-          fromY: ev.fromY < ev.toY ? ev.fromY : ev.toY,
-          toX: ev.toX > ev.fromX ? ev.toX : ev.fromX,
-          toY: ev.toY > ev.fromY ? ev.toY : ev.fromY,
-          price: ev.price.toString() // toString here, because values can be too bog for DB
+          fromX: ev.args.fromX < ev.args.toX ? ev.args.fromX : ev.args.toX,
+          fromY: ev.args.fromY < ev.args.toY ? ev.args.fromY : ev.args.toY,
+          toX: ev.args.toX > ev.args.fromX ? ev.args.toX : ev.args.fromX,
+          toY: ev.args.toY > ev.args.fromY ? ev.args.toY : ev.args.fromY,
+          price: ev.args.price.toString() // toString here, because values can be too bog for DB
         }
       })
 
@@ -129,7 +129,7 @@ async function mainLoop() {
 
     // get ads with no images (not downloaded)
     let ads = await db.getAdsNoImages()
-    logger.info(`Got ${ads.count()} ads with no images.`)
+    logger.info(`Got ads with no images.`)
 
     // download images and save to db
     let wg = new WebGateway(config)
@@ -137,7 +137,7 @@ async function mainLoop() {
         ad.updates = {}
         logger.info(`Downloading image for ad ID ${ad.ID} from ${ad.imageSourceUrl}...`)
         let [ downloadResult, error ] = await wg.downloadImage(ad.imageSourceUrl)
-        const fullImageBinary = null
+        let fullImageBinary = null
         if (downloadResult) { 
             // full image binary is a temporary value. It shouldn't be save to db
             fullImageBinary = downloadResult.binary
@@ -292,7 +292,7 @@ async function mainLoop() {
 
 async function main() {
     
-    logger.error(`STARTING APP (JUST LOGGING AS ERROR. ALL FINE)`)  // logging as error to see it in telegram
+    logger.info(`STARTING APP (JUST LOGGING AS ERROR. ALL FINE)`)  // logging as error to see it in telegram
     // register SIGINT event
     process.on('SIGINT', async () => {
         console.log('Terminating...')

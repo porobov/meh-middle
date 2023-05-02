@@ -11,14 +11,16 @@ const infoFilter = winston.format((info, opts) => {
   return info.level === 'info' ? info : false;
 });
 
+const consoleTransport = new winston.transports.Console({
+        format: winston.format.cli()
+      })
+
 
 const logger = winston.createLogger({
     level: process.env.LOG_LEVEL || 'info',
     format: combine(errors({ stack: true }), timestamp(), json()),
     transports: [
-      new winston.transports.Console({
-        format: winston.format.cli()
-      }),
+      consoleTransport,
       new winston.transports.File({
         filename: 'logs/combined.log',
       }),
@@ -36,13 +38,16 @@ const logger = winston.createLogger({
         level: 'error',
         token: process.env.BOT_TOKEN !== undefined ? process.env.BOT_TOKEN : "",
         chatId: process.env.CHAT_ID !== undefined ? process.env.CHAT_ID : "",
+        format: combine(errorFilter(), timestamp(), json()),
       }),
     ],
     exceptionHandlers: [
       new winston.transports.File({ filename: 'logs/exception.log' }),
+      consoleTransport,
     ],
     rejectionHandlers: [
       new winston.transports.File({ filename: 'logs/rejections.log' }),
+      consoleTransport,
     ],
   })
 
