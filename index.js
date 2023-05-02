@@ -292,7 +292,7 @@ async function mainLoop() {
 
 async function main() {
     
-    logger.info(`STARTING APP`)
+    logger.error(`STARTING APP (JUST LOGGING AS ERROR. ALL FINE)`)  // logging as error to see it in telegram
     // register SIGINT event
     process.on('SIGINT', async () => {
         console.log('Terminating...')
