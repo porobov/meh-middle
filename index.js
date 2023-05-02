@@ -60,6 +60,8 @@ async function mainLoop() {
     
     // get events
     let newEvents = await contract.getEvents(NEW_IMAGE_EVENT_NAME, fromBlock)
+    if ( newEvents == null ) { return }
+
     logger.info(
         `Received ${newEvents.decodedEvents.length} 
         new ${ NEW_IMAGE_EVENT_NAME } events 

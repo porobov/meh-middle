@@ -9,7 +9,7 @@ tryCatch = async (tryer) => {
     const result = await tryer()
     return [result, null]
   } catch (error) {
-    logger.info(chalk.red(" ↓↓↓ Cought error ↓↓↓ "))  // TODO remove this??
+    logger.info(chalk.red(" ↓↓↓ Cought error ↓↓↓ ")) 
     logger.info(error)
     logger.info(chalk.red(" ↑↑↑ Cought error ↑↑↑ "))
     return [null, error]
@@ -61,7 +61,7 @@ class DB {
   async dropCollection(collection) {
     if (!(await this.isEmptyCollection(collection))) {
       collection.drop()
-      logger.info(`Dropped collection ${collection.name}`) // TODO find .name method
+      logger.info(`Dropped collection ${collection.collectionName}`) 
     }
   }
 
@@ -79,7 +79,7 @@ class DB {
 
   async createCollectionWithUniqueID(collection) {
     await this.dropCollection(this.ads)
-    logger.info(`Creating collection ${collection.name}`)  // TODO find name
+    logger.info(`Creating collection ${collection.collectionName}`)
     await this.ads.createIndex({ "ID": 1 }, { unique: true })
   }
 
@@ -303,7 +303,6 @@ class DB {
     return this._saveSnapshot(this.buySellSnapshots, newSnapshot)
   }
 
-// TODO tidy up snapshot records (keep only some limited tail)
 }
 
 module.exports = {

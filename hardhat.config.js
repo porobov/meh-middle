@@ -2,9 +2,8 @@ require("@nomicfoundation/hardhat-toolbox");
 require("dotenv").config();
 
 /** @type import('hardhat/config').HardhatUserConfig */
-// TODO move mogo credentials to env
 module.exports = {
-  dbConf: {  // TODO rename to some other conf name
+  dbConf: { 
     stateRecordName: "two",  // a single record in state collection is responsible for state
     dbAccessUrl: process.env.MONGO_ACCESS_URL !== undefined ? process.env.MONGO_ACCESS_URL : "",
     dbName: "test",
