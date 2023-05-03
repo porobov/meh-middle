@@ -3,9 +3,15 @@ const hre = require("hardhat");
 let db = new DB(hre.config.dbConf)
 
 async function main() {
-    await db.connect() 
-    await db.createDB()
+  try {
+    if (await db.connect()) {
+      await db.createDB()
+    }
+  } catch (e) {
+    throw e
+  } finally {
     await db.close()
+  }
 }
 main()
   .then(() => process.exit(0))

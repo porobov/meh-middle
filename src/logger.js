@@ -41,14 +41,14 @@ const logger = winston.createLogger({
         format: combine(errorFilter(), timestamp(), json()),
       }),
     ],
-    exceptionHandlers: [
-      new winston.transports.File({ filename: 'logs/exception.log' }),
-      consoleTransport,
-    ],
-    rejectionHandlers: [
-      new winston.transports.File({ filename: 'logs/rejections.log' }),
-      consoleTransport,
-    ],
+    // exceptionHandlers: [
+    //   new winston.transports.File({ filename: 'logs/exception.log' }),
+    //   consoleTransport,
+    // ],
+    // rejectionHandlers: [
+    //   new winston.transports.File({ filename: 'logs/rejections.log' }),
+    //   consoleTransport,
+    // ],
   })
 
   module.exports = {

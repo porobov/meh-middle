@@ -98,8 +98,8 @@ from block ${ fromBlock } to ${newEvents.blockNumber}`)
     // get events
     let buySellEvents = await contract.getEvents(BUY_SELL_EVENT_NAME, buySellFromBlock)
     logger.info(
-`Received ${ buySellEvents.decodedEvents.length } /
-new ${ BUY_SELL_EVENT_NAME } events /
+`Received ${ buySellEvents.decodedEvents.length } \
+new ${ BUY_SELL_EVENT_NAME } events \
 from block ${ buySellFromBlock } to ${ buySellEvents.blockNumber }`)
 
     const formatedBuySellEvents = buySellEvents.decodedEvents.map(ev => {
@@ -129,26 +129,27 @@ from block ${ buySellFromBlock } to ${ buySellEvents.blockNumber }`)
 
     // get ads with no images (not downloaded)
     let ads = await db.getAdsNoImages()
+    let adUpdates = []
     logger.info(`Got ads with no images.`)
 
     // download images and save to db
     let wg = new WebGateway(config)
     for await (const ad of ads) {
-        ad.updates = {}
+        let updates = {}
         logger.info(`Downloading image for ad ID ${ad.ID} from ${ad.imageSourceUrl}...`)
         let [ downloadResult, error ] = await wg.downloadImage(ad.imageSourceUrl)
         let fullImageBinary = null
         if (downloadResult) { 
             // full image binary is a temporary value. It shouldn't be save to db
             fullImageBinary = downloadResult.binary
-            ad.updates.imageExtension = downloadResult.extension
-            ad.updates.downloadTimestamp = Date.now()
+            updates.imageExtension = downloadResult.extension
+            updates.downloadTimestamp = Date.now()
             logger.info(`Downloaded ${downloadResult.extension} image`)
         } else {
             // if failed to download, decide if we want to retry later
-            Object.assign(ad.updates, constructRetryParams(error, ad.numOfTries))
-            ad.updates.error = JSON.stringify(error)  // need to show error to user
-            if ( ad.updates.failedToDownLoad ) {
+            Object.assign(updates, constructRetryParams(error, ad.numOfTries))
+            updates.error = JSON.stringify(error)  // need to show error to user
+            if ( updates.failedToDownLoad ) {
                 logger.warn(`Failed to download image for ad ID ${ ad.ID }. Source: ${ ad.imageSourceUrl }`)
             }
         }
@@ -157,14 +158,21 @@ from block ${ buySellFromBlock } to ${ buySellEvents.blockNumber }`)
         if ( fullImageBinary ) {
             let ie = new ImageEditor(config)
             // image for thumbnail will fit configured size
-            ad.updates.imageThumb = await ie.getImageThumbBinary(ad) 
+            updates.imageThumb = await ie.getImageThumbBinary(ad) 
             // image for pixelMap will resize ignoring aspect ratio
             // will also enlarge image if too small
-            ad.updates.imageForPixelMap = await ie.getImageForPixelMap(ad)
+            updates.imageForPixelMap = await ie.getImageForPixelMap(ad)
             logger.info(`Created pixel map image for ad`)
         }
+
+        adUpdates.push({
+            ID: ad.ID,
+            updates: updates,
+        })
     }
-    let updatesCount = await db.appendImagesToAds(ads)
+
+    // TODO do not fix invalid input error yet
+    let updatesCount = await db.appendImagesToAds(adUpdates)
     if ( updatesCount > 0 ) {
         logger.info(`Updated ${ updatesCount } images in the db`)
     }
@@ -185,8 +193,8 @@ from block ${ buySellFromBlock } to ${ buySellEvents.blockNumber }`)
     // if so find an older snapshot
     // (relevant to images that were uploaded after retries)
     const earliestID = await db.getEarliestAdIdAfterTimestamp(
-        adsSnapshot.getLatestAdDownloadTimestamp())
-    if (earliestID && earliestID < adsSnapshot.getLatestAdID()) {
+        adsSnapshot.getBGLatestAdDownloadTimestamp())
+    if (earliestID && earliestID < adsSnapshot.getBGLatestAdID()) {
         let prevSnapshot = await db.getAdsSnapshotBeforeID(earliestID)
         if (prevSnapshot == null) { return }
         adsSnapshot = new AdsSnapshot(prevSnapshot, snapshotOptions)
@@ -194,7 +202,7 @@ from block ${ buySellFromBlock } to ${ buySellEvents.blockNumber }`)
 
     // retrieve ads with higher ID, sorted  by ID
     // (returns cursor)
-    const adsToBeAdded = await db.getAdsFromID(adsSnapshot.getLatestAdID())
+    const adsToBeAdded = await db.getAdsFromID(adsSnapshot.getBGLatestAdID())
     for await (const ad of adsToBeAdded) {
         adsSnapshot.overlay(ad)  // overlay new ads
     }
@@ -302,8 +310,9 @@ async function main() {
     async function interval() {
         try {
             logger.info(`================= STARTING NEW CYCLE =================`)
-            await db.connect()
-            await mainLoop()
+            if ( await db.connect() ) {
+                await mainLoop()
+            }
         } catch (e) {
             throw e
         } finally {

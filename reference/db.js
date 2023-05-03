@@ -4,12 +4,12 @@ const { logger } = require("./logger.js")
 
 const MODULE_NAME = "chain"
 // try-catch wrapper
-const withErrorHandling = async (fn, fnName) => {
+tryCatch = async (tryer) => {
   try {
-    const result = await fn()
+    const result = await tryer()
     return [result, null]
   } catch (error) {
-    logger.error(error, { module: MODULE_NAME, function: fnName })
+    logger.error(error, { module: MODULE_NAME, function: tryer.name })
     return [null, error]
   }
 }
@@ -23,7 +23,7 @@ class DB {
   }
 
   async connect() {
-    const [res, err] = await withErrorHandling(async () => await this.client.connect(), "connect")
+    const [res, err] = await tryCatch(async () => await this.client.connect())
     if (this.client && this.client.topology.isConnected()) {
       this.db = this.client.db(this.conf.dbName)
       // initialize collections
@@ -41,7 +41,7 @@ class DB {
   }
 
   async close() {
-    const [res, err] = await withErrorHandling(async () => await this.client.close(), "close")
+    const [res, err] = await tryCatch(async () => await this.client.close())
   }
 
 
@@ -53,9 +53,8 @@ class DB {
 
   // checking if collection is empty
   async isEmptyCollection(collection) {
-    const [res, err] = await withErrorHandling(
-      async () => await collection.find().limit(1).toArray(),
-      "isEmptyCollection")
+    const [res, err] = await tryCatch(
+      async () => await collection.find().limit(1).toArray())
     if (res.length == 0) {
       return true
     } else {
@@ -96,25 +95,21 @@ class DB {
       latestEventId: 0, // this is also unique ID of the snapshot
       bigPicUrl: null,
       bigPicBinary: null,
-      linksMapJSON: '[]',
-      latestDownloadTimestamp: 0
+      linksMapJSON: '[]'
     }
-    const [res, err] = await withErrorHandling(
-      async () => await this.adsSnapshots.insertOne(emptySnapshot),
-      "putEmptyAdsSnapshot")
+    const [res, err] = await tryCatch(
+      async () => await this.adsSnapshots.insertOne(emptySnapshot))
     logger.info(`Empty Ads snaphot was recorded to db`)
   }
 
   async putEmptyBuySellSnapshot() {
-    // TODO latestEventID instead of TxID
     let emptySnapshot = {
       // also see snapshot validity check 
       latestTransactionID: 0,
       ownershipMapJSON: '[]'
     }
-    const [res, err] = await withErrorHandling(
-      async () => await this.buySellSnapshots.insertOne(emptySnapshot),
-      "putEmptyBuySellSnapshot")
+    const [res, err] = await tryCatch(
+      async () => await this.buySellSnapshots.insertOne(emptySnapshot))
     logger.info(`Empty BuySell snaphot was recorded to db`)
   }
 
@@ -130,9 +125,8 @@ class DB {
   async saveLatestBlockForEvent(eventName, latestBlock) {
     var myquery = { state_id: this.tempStateId };
     var newvalues = { $set: { [this.recordNameForEvent(eventName)]: latestBlock } };
-    const [saveResult, err] = await withErrorHandling(
-      async () => await this.state.updateOne(myquery, newvalues),
-      "saveLatestBlockForEvent")
+    const [saveResult, err] = await tryCatch(
+      async () => await this.state.updateOne(myquery, newvalues))
     if (saveResult && Object.hasOwn(saveResult, 'modifiedCount') && saveResult.modifiedCount == 1) {
       return true
     } else {
@@ -143,10 +137,8 @@ class DB {
   async getLatestBlockForEvent(eventName) {
     var myquery = { state_id: this.tempStateId };
     // db ensures there's 0 value for the first run
-    const [res, err] = await withErrorHandling(
-      async () => (
-        await this.state.findOne(myquery))[this.recordNameForEvent(eventName)],
-        "getLatestBlockForEvent")
+    const [res, err] = await tryCatch(
+      async () => (await this.state.findOne(myquery))[this.recordNameForEvent(eventName)])
     return res  // will return null on error and log error
   }
 
@@ -162,9 +154,8 @@ class DB {
 
   // will put events into db
   async _addEvents(decodedEvents, collection) {
-    const [res, err] = await withErrorHandling(
-      async () => await collection.insertMany(decodedEvents, { ordered: false }),
-      "_addEvents")
+    const [res, err] = await tryCatch(
+      async () => await collection.insertMany(decodedEvents, { ordered: false }))
     if (err && Object.hasOwn(err, 'code') && err.code === 11000) {
       logger.info('Duplicate key error');
     }
@@ -195,11 +186,10 @@ class DB {
         { imageForPixelMap: { $exists: false } }
       ]
     }
-    let [res, err] = await withErrorHandling(
+    let [res, err] = await tryCatch(
       async () => await this.ads
         .find(myquery)
-        .limit(this.conf.imagesBatchSize),
-        "getAdsNoImages")
+        .limit(this.conf.imagesBatchSize))
     if (res) {
       return res
     } else {
@@ -223,9 +213,8 @@ class DB {
     // bulk write
     let [res, err] = [null, null]
     if (operations.length > 0) {
-      [res, err] = await withErrorHandling(
-        async () => await this.ads.bulkWrite(operations, { ordered: false }),
-        "appendImagesToAds")
+      [res, err] = await tryCatch(
+        async () => await this.ads.bulkWrite(operations, { ordered: false }))
     }
     if (res && Object.hasOwn(res, 'modifiedCount') && res.modifiedCount > 0) {
       return res.modifiedCount
@@ -236,24 +225,21 @@ class DB {
 
   // SNAPSHOTS
 
-  // retrieves the most recent snapshot before ID
   async _getSnapshotBeforeID(collection, ID) {
     let query = { latestEventId: { $lt: ID } }
     if (ID == 'infinity') {
-      query = {}
+      query = { $query: {}, $orderby: { latestEventId: -1 } }
     }
-    const [res, err] = await withErrorHandling(
-      async () => await collection.findOne(query, { sort: { latestEventId: -1 } }),
-      "_getSnapshotBeforeID")
+    const [res, err] = await tryCatch(
+      async () => await collection.findOne(query))
     return res
   }
 
   async _getEventsFromID(collection, ID) {
     let query = { ID: { $gt: ID } }
-    let fullQuery = { query, $orderby: { ID: 1 } }
-    const [res, err] = await withErrorHandling(
-      async () => await collection.find(fullQuery),
-      "_getEventsFromID")
+    let fullQuery = { $query: query, $orderby: { ID: 1 } }
+    const [res, err] = await tryCatch(
+      async () => await collection.find(fullQuery))
     if (res) {
       return res
     } else {
@@ -262,7 +248,7 @@ class DB {
   }
 
   async _saveSnapshot(collection, newSnapshot) {
-    const [res, err] = await withErrorHandling(
+    const [res, err] = await tryCatch(
       async () => {
         // remove stale snapshot (one in - one out)
         const count = await collection.countDocuments()
@@ -270,8 +256,7 @@ class DB {
           collection.findOneAndDelete({}, { sort: { latestEventId: 1 } })
         }
         return await collection.insertOne(newSnapshot)
-      },
-      "_saveSnapshot")
+      })
     if (res && Object.hasOwn(res, 'insertedCount') && res.insertedCount == 1) {
       return true
     } else {
@@ -291,10 +276,9 @@ class DB {
   // is required to add laggards to snaphot (images that were downloaded on retries)
   async getEarliestAdIdAfterTimestamp(latestAdDownloadTimestamp) {
     let query = { downloadTimestamp: { $gt: latestAdDownloadTimestamp } }
-    let fullQuery = { query, $orderby: { ID: 1 } }
-    const [res, err] = await withErrorHandling(
-      async () => await this.ads.findOne(fullQuery),
-      "getEarliestAdIdAfterTimestamp")
+    let fullQuery = { $query: query, $orderby: { ID: 1 } }
+    const [res, err] = await tryCatch(
+      async () => await this.ads.findOne(fullQuery))
 
     // findOne will return null if there's no match
     if (res && Object.hasOwn(res, 'ID')) {

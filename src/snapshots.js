@@ -6,6 +6,7 @@ class AdsSnapshot {
     // construct from the same fields as in export (retrieved from db)
     // expects an empty object if no snapshots exist yet
     constructor(previousSnapshot, options) {
+        this.bg = previousSnapshot
         this.latestEventId = previousSnapshot.latestEventId
         this.linksMapJSON = previousSnapshot.linksMapJSON
         this.bgBinary = previousSnapshot.bigPicBinary
@@ -27,8 +28,16 @@ class AdsSnapshot {
         return JSON.stringify(parsedLinksMap)
     }
 
+    getBGLatestAdID(){
+        return this.bg.latestEventId
+    }
+
     getLatestAdID(){
         return this.latestEventId
+    }
+
+    getBGLatestAdDownloadTimestamp() {
+        return this.bg.latestDownloadTimestamp
     }
 
     // overlays an ad over given snapshot
@@ -44,7 +53,9 @@ class AdsSnapshot {
         })
         this.linksMapJSON = this._addToLinksMapJSON(this.linksMapJSON, ad)
         this.latestEventId = ad.ID
-        this.latestDownloadTimestamp = ad.downloadTimestamp
+        if ( ad.downloadTimestamp > this.latestDownloadTimestamp ) {
+            this.latestDownloadTimestamp = ad.downloadTimestamp
+        }
     }
 
     gotOverlays() {
