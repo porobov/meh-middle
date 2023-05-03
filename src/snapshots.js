@@ -85,9 +85,9 @@ class AdsSnapshot {
 
 class BuySellSnapshot {
     constructor(previousSnapshot) {
-        this.isMerged = false
+        this.bg = previousSnapshot
         this._gotOverlays = false
-        this.latestTransactionID = previousSnapshot.latestTransactionID
+        this.latestEventId = previousSnapshot.latestEventId
         this.ownershipMapJSON = previousSnapshot.ownershipMapJSON
     }
 
@@ -104,21 +104,23 @@ class BuySellSnapshot {
     }
 
     overlay(buySellTx) {
-        if (this.isMerged) {
-            throw new Error("Cannot overlay - merged already")}
         this.ownershipMapJSON = this._addToOwnershipMapJSON(
             this.ownershipMapJSON,
             buySellTx)
         this._gotOverlays = true
-        this.latestTransactionID = buySellTx.ID
+        this.latestEventId = buySellTx.ID
     }
 
     gotOverlays() {
         return this._gotOverlays
     }
 
+    getBGLatestTransactionID() {
+        return this.bg.latestEventId
+    }
+
     getLatestTransactionID() {
-        return this.latestTransactionID
+        return this.latestEventId
     }
 
     getOwnershipMapJSON(){

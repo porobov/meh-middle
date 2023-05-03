@@ -2,7 +2,7 @@ const { MongoClient } = require("mongodb")
 const chalk = require("chalk")
 const { logger } = require("./logger.js")
 
-const MODULE_NAME = "chain"
+const MODULE_NAME = "db"
 // try-catch wrapper
 const withErrorHandling = async (fn, fnName) => {
   try {
@@ -109,7 +109,7 @@ class DB {
     // TODO latestEventID instead of TxID
     let emptySnapshot = {
       // also see snapshot validity check 
-      latestTransactionID: 0,
+      latestEventId: 0,
       ownershipMapJSON: '[]'
     }
     const [res, err] = await withErrorHandling(
@@ -250,7 +250,7 @@ class DB {
 
   async _getEventsFromID(collection, ID) {
     let query = { ID: { $gt: ID } }
-    let fullQuery = { query, $orderby: { ID: 1 } }
+    let fullQuery = { query, sort: { ID: 1 } }
     const [res, err] = await withErrorHandling(
       async () => await collection.find(fullQuery),
       "_getEventsFromID")
@@ -291,9 +291,8 @@ class DB {
   // is required to add laggards to snaphot (images that were downloaded on retries)
   async getEarliestAdIdAfterTimestamp(latestAdDownloadTimestamp) {
     let query = { downloadTimestamp: { $gt: latestAdDownloadTimestamp } }
-    let fullQuery = { query, $orderby: { ID: 1 } }
     const [res, err] = await withErrorHandling(
-      async () => await this.ads.findOne(fullQuery),
+      async () => await this.ads.findOne(query, { sort: { ID: 1 }}),
       "getEarliestAdIdAfterTimestamp")
 
     // findOne will return null if there's no match

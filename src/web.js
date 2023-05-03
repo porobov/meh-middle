@@ -31,6 +31,7 @@ class WebGateway {
     }
   }
 
+  // debug function
   _saveImageBufferToDisk(imageBuffer, filename) {
     // const path = Path.resolve(__dirname, imageName, imageFormat)
     // const writer = fs.createWriteStream(path)
@@ -40,8 +41,26 @@ class WebGateway {
     });
   }
 
+  // debug function
+  _saveObjectToFile(data, fileName) {
+    fs.writeFileSync(fileName, data);
+    logger.info(`The file ${ fileName } has been saved!`);
+  }
+
   async _getImageSize(url) {
     return await ufs(url)
+  }
+
+  async uploadAdsSnapshotPic(bigPicBinary){
+    const filename = "./logs/hey.png"
+    this._saveImageBufferToDisk(bigPicBinary, filename)
+    return filename
+  }
+
+  async publish(JSON_siteData){
+    const fileName = "./logs/hey.json"
+    this._saveObjectToFile(JSON_siteData, fileName)
+    return fileName
   }
 }
 module.exports = {

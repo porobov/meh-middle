@@ -212,7 +212,7 @@ from block ${ buySellFromBlock } to ${ buySellEvents.blockNumber }`)
             latestEventId: adsSnapshot.getLatestAdID(),
             linksMapJSON: adsSnapshot.getLinksMapJSON(),
             bigPicBinary: await adsSnapshot.getMergedBigPic(),
-            adsBigPicUrl: await uploader.uploadAdsSnapshotPic(bigPicBinary)
+            adsBigPicUrl: await wg.uploadAdsSnapshotPic(bigPicBinary)
         }
         // check snapshot validity (important as we are not catching upload errors)
         // these are zero snapshot params (see db)
@@ -248,20 +248,20 @@ from block ${ buySellFromBlock } to ${ buySellEvents.blockNumber }`)
     if ( buySellSnapshot.gotOverlays() ) {
         // upload big pic and links map
         const newSnapshot =  {
-            latestBuySellId: buySellSnapshot.getLatestTransactionID(),
+            latestEventId: buySellSnapshot.getLatestTransactionID(),
             ownershipMapJSON: buySellSnapshot.getOwnershipMapJSON(),
         }
         // check snapshot validity (important as we are not catching upload errors)
         // these are zero snapshot params (see db)
         if (
-            newSnapshot.latestBuySellId != null 
+            newSnapshot.latestEventId != null 
             && newSnapshot.ownershipMapJSON != '[]'
         ) {
             if (await db.saveBuySellSnapshot(newSnapshot)) {
-                logger.info(`Saved buySell snapshot. Latest buySell ID: ${ newSnapshot.latestBuySellId }`)
+                logger.info(`Saved buySell snapshot. Latest buySell ID: ${ newSnapshot.latestEventId }`)
             }
         } else {
-            logger.error(`Snapshot got overlays, but some values are null. Latest buySell ID: ${ newSnapshot.latestBuySellId }`)
+            logger.error(`Snapshot got overlays, but some values are null. Latest buySell ID: ${ newSnapshot.latestEventId }`)
         }
     }
     
@@ -287,11 +287,11 @@ from block ${ buySellFromBlock } to ${ buySellEvents.blockNumber }`)
         && siteData.newImageLatestCheckedBlock > 0
         && siteData.buySellLatestCheckedBlock > 0
     ) {
-        const isServing = await uploader.publish(JSON.stringify(siteData))
+        const isServing = await wg.publish(JSON.stringify(siteData, null, 2))
         if (isServing) {
-            logger.info(`Site data publised. Latest blocks checked: 
-                        NewImage: ${siteData.newImageLatestCheckedBlock}, 
-                        BuySell: ${siteData.buySellLatestCheckedBlock} `)
+            logger.info(`Site data publised. Latest blocks checked: \
+NewImage: ${siteData.newImageLatestCheckedBlock}, \
+BuySell: ${siteData.buySellLatestCheckedBlock} `)
         }
     } else {
         logger.error("Built wrong site data. Some values are absent", siteData)
