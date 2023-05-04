@@ -203,7 +203,7 @@ from block ${ buySellFromBlock } to ${ buySellEvents.blockNumber }`)
     const snapshotOptions = { defaultBgPath: DEFAULT_BG_PATH }
     let previousSnapshot = await db.getAdsSnapshotBeforeID('infinity')
     if (previousSnapshot == null) { return }  // can happen on error
-    const adsSnapshot = new AdsSnapshot( previousSnapshot, snapshotOptions )
+    let adsSnapshot = new AdsSnapshot( previousSnapshot, snapshotOptions )
 
     // checking if got timestamp higher than of the snapshot, but with lower ID
     // if so find an older snapshot
@@ -220,8 +220,9 @@ from block ${ buySellFromBlock } to ${ buySellEvents.blockNumber }`)
     // (returns cursor)
     const adsToBeAdded = await db.getAdsFromID(adsSnapshot.getBGLatestAdID())
     for await (const ad of adsToBeAdded) {
-        adsSnapshot.overlay(ad)  // overlay new ads
+        await adsSnapshot.overlay(ad)  // overlay new ads
     }
+    logger.debug("before saving snapshot")
     // save new snapshot to db (saving only fully processed snapshots)
     if ( adsSnapshot.gotOverlays() ) {
         const bigPicBinary = await adsSnapshot.getMergedBigPic()
