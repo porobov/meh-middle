@@ -250,9 +250,9 @@ class DB {
 
   async _getEventsFromID(collection, ID) {
     let query = { ID: { $gt: ID } }
-    let fullQuery = { query, sort: { ID: 1 } }
+    let options = { sort: { ID: 1 } }
     const [res, err] = await withErrorHandling(
-      async () => await collection.find(fullQuery),
+      async () => await collection.find(query, options),
       "_getEventsFromID")
     if (res) {
       return res
@@ -261,6 +261,8 @@ class DB {
     }
   }
 
+  // TODO make it save or update. 
+  // new snapshot may include newly downloaded images for old ad IDs
   async _saveSnapshot(collection, newSnapshot) {
     const [res, err] = await withErrorHandling(
       async () => {

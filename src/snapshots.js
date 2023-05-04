@@ -1,5 +1,17 @@
+const { logger } = require("ethers")
 const { ImageEditor } = require("./imageEditor.js")
 
+// TODO make it for ads snapshot as well
+function _addToJsonMap(bgJson, coords, entry) {
+    let parsedMap = JSON.parse(bgJson)
+    for (let x = coords.fromX; x == coords.toX; x++) {
+        for (let y = coords.fromY; y == coords.toY; y++) {
+            if (!parsedMap[x]) { parsedMap[x] = [] }
+            parsedMap[x][y] = entry
+        }
+    }
+    return JSON.stringify(parsedMap)
+}
 
 class AdsSnapshot {
 
@@ -15,17 +27,15 @@ class AdsSnapshot {
     }
 
     _addToLinksMapJSON(linksMapJSON, newAd) {
-        let parsedLinksMap = JSON.parse(linksMapJSON)
-        for (let x = newAd.fromX; x = newAd.toX; x++ ) {
-            for (let y = newAd.fromY; y = newAd.toY; y++ ) {
-                parsedLinksMap[x][y] = {
-                    adText: newAd.adText,
-                    adUrl: newAd.adUrl,
-                    imageSourceUrl: newAd.imageSourceUrl
-                }
+        return _addToJsonMap(
+            linksMapJSON,
+            newAd,
+            {
+                adText: newAd.adText,
+                adUrl: newAd.adUrl,
+                imageSourceUrl: newAd.imageSourceUrl
             }
-        }
-        return JSON.stringify(parsedLinksMap)
+        )
     }
 
     getBGLatestAdID(){
@@ -46,11 +56,15 @@ class AdsSnapshot {
         if (this.mergedBigPic) {
             throw new Error("Cannot overlay - merged big pic already")}
         // input, top and left are params for shark image processor
-        this.overlays.push({ 
-            input: ad.imageForPixelMap,
+        const ie = new ImageEditor({})
+        const newOverlay = { 
+            // put 1 px if imageForPixelMap is null
+            input: ad.imageForPixelMap ? ad.imageForPixelMap : await ie.blankImage(1,1),
             top: (ad.fromY - 1) * 10,
             left: (ad.fromX - 1) * 10
-        })
+        }
+        this.overlays.push(newOverlay)
+        console.log(newOverlay)
         this.linksMapJSON = this._addToLinksMapJSON(this.linksMapJSON, ad)
         this.latestEventId = ad.ID
         if ( ad.downloadTimestamp > this.latestDownloadTimestamp ) {
@@ -66,11 +80,11 @@ class AdsSnapshot {
     async getMergedBigPic(){
         if (!this.mergedBigPic) {
             let ie = new ImageEditor({})
-            if (!this.bgBinary) {
+            if ( this.bgBinary == null ) {
                 this.bgBinary =
                     await ie.createBackgroundImage(this.defaultBgPath)
             }
-            this.mergedBigPic = await ie.overlayAd(
+            this.mergedBigPic = await ie.overlayAds(
                 this.bgBinary,
                 this.overlays
             )
@@ -91,16 +105,13 @@ class BuySellSnapshot {
         this.ownershipMapJSON = previousSnapshot.ownershipMapJSON
     }
 
+
     _addToOwnershipMapJSON(ownershipMapJSON, buySellTx) {
-        let parsedOwnershipMap = JSON.parse(ownershipMapJSON)
-        for (let x = buySellTx.fromX; x = buySellTx.toX; x++ ) {
-            for (let y = buySellTx.fromY; y = buySellTx.toY; y++ ) {
-                parsedOwnershipMap[x][y] = {
-                    price: buySellTx.price
-                }
-            }
-        }
-        return JSON.stringify(parsedOwnershipMap)
+        return _addToJsonMap(
+            ownershipMapJSON,
+            buySellTx,
+            { price: ownershipMapJSON.price }
+        )
     }
 
     overlay(buySellTx) {

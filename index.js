@@ -78,6 +78,7 @@ from block ${ fromBlock } to ${newEvents.blockNumber}`)
         numOfTries: 0,  // num of download tries for ad image
         failedToDownLoad: false,  // flag. If image failed to download
         nextTryTimestamp: 0,  // next download attempt timestamp
+        downloadTimestamp: 0,  // image download status change timestamp to be precise
       }
     })
 
@@ -143,26 +144,41 @@ from block ${ buySellFromBlock } to ${ buySellEvents.blockNumber }`)
             // full image binary is a temporary value. It shouldn't be save to db
             fullImageBinary = downloadResult.binary
             updates.imageExtension = downloadResult.extension
-            updates.downloadTimestamp = Date.now()
             logger.info(`Downloaded ${downloadResult.extension} image`)
         } else {
             // if failed to download, decide if we want to retry later
             Object.assign(updates, constructRetryParams(error, ad.numOfTries))
             updates.error = JSON.stringify(error)  // need to show error to user
             if ( updates.failedToDownLoad ) {
-                logger.warn(`Failed to download image for ad ID ${ ad.ID }. Source: ${ ad.imageSourceUrl }`)
+                logger.error(`Failed to download image for ad ID ${ ad.ID }. Source: ${ ad.imageSourceUrl }`)
             }
+        }
+
+        // add timestamp on first download attempt in any case
+        // so that the ad can make it to the pixelmap (see snapshot construction)
+        if ( ad.downloadTimestamp == 0 ) {
+            updates.downloadTimestamp = Date.now()
         }
 
         // resize images
         if ( fullImageBinary ) {
             let ie = new ImageEditor(config)
             // image for thumbnail will fit configured size
-            updates.imageThumb = await ie.getImageThumbBinary(ad) 
+            const thumb = await ie.getImageThumbBinary(ad)
             // image for pixelMap will resize ignoring aspect ratio
             // will also enlarge image if too small
-            updates.imageForPixelMap = await ie.getImageForPixelMap(ad)
-            logger.info(`Created pixel map image for ad`)
+            const px = await ie.getImageForPixelMap(ad)
+            if ( thumb && px ) {
+                // adding ts again for the case when laggards get downloaded and resized
+                // this is actually real successful download ts
+                updates.downloadTimestamp = Date.now() 
+                logger.info(`Created pixel map image for ad`)
+            } else {
+                updates.failedToDownLoad = true  // to prevent it from download tries
+                updates.error = "Failed to resize image. Will be excluded from pixel map (only the image itself)"
+            }
+            updates.imageThumb = thumb
+            updates.imageForPixelMap = px
         }
 
         adUpdates.push({
@@ -208,12 +224,14 @@ from block ${ buySellFromBlock } to ${ buySellEvents.blockNumber }`)
     }
     // save new snapshot to db (saving only fully processed snapshots)
     if ( adsSnapshot.gotOverlays() ) {
+        const bigPicBinary = await adsSnapshot.getMergedBigPic()
         const newSnapshot =  {
             latestEventId: adsSnapshot.getLatestAdID(),
             linksMapJSON: adsSnapshot.getLinksMapJSON(),
-            bigPicBinary: await adsSnapshot.getMergedBigPic(),
+            bigPicBinary: bigPicBinary,
             adsBigPicUrl: await wg.uploadAdsSnapshotPic(bigPicBinary)
         }
+        // logger.info(`Built new Ads snapshot with latest event ID ${ newSnapshot.latestEventId }`)
         // check snapshot validity (important as we are not catching upload errors)
         // these are zero snapshot params (see db)
         if (

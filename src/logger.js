@@ -34,12 +34,12 @@ const logger = winston.createLogger({
         level: 'info',
         format: combine(infoFilter(), timestamp(), json()),
       }),
-      new TelegramLogger({
-        level: 'error',
-        token: process.env.BOT_TOKEN !== undefined ? process.env.BOT_TOKEN : "",
-        chatId: process.env.CHAT_ID !== undefined ? process.env.CHAT_ID : "",
-        format: combine(errorFilter(), timestamp(), json()),
-      }),
+      // new TelegramLogger({
+      //   level: 'error',
+      //   token: process.env.BOT_TOKEN !== undefined ? process.env.BOT_TOKEN : "",
+      //   chatId: process.env.CHAT_ID !== undefined ? process.env.CHAT_ID : "",
+      //   format: combine(errorFilter(), timestamp(), json()),
+      // }),
     ],
     // exceptionHandlers: [
     //   new winston.transports.File({ filename: 'logs/exception.log' }),

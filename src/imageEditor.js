@@ -11,11 +11,22 @@ function getDimensions(adRecord) {
 
 class ImageEditor {
 
-    constructor(conf) {
-        this.conf = conf
-    }
+  constructor(conf) {
+    this.conf = conf
+  }
 
-    async fitInside(imageBuffer, width, height, fit, noEnlargement) {
+  async blankImage(width, height) {
+    return sharp({
+      create: {
+        width: width,
+        height: height,
+        channels: 3,
+        background: { r: 255, g: 255, b: 255 } // white background
+      }
+    }).toBuffer()
+  }
+
+    async _fitInside(imageBuffer, width, height, fit, noEnlargement) {
         try {
             return [await sharp(imageBuffer)
               .resize(width, height, {
@@ -37,13 +48,14 @@ class ImageEditor {
     }
 
     async createBackgroundImage(source){
+      logger.info(`Creating blank backgroud image`)
       return await sharp(source)
         .toBuffer();
     }
 
     async getImageThumbBinary(ad) {
       // todo log error here with additional fields
-      const [imageBuffer, error] = await this.fitInside(
+      const [imageBuffer, error] = await this._fitInside(
         ad.fullImageBinary,
         this.conf.thumbnailParams.width,
         this.conf.thumbnailParams.height,
@@ -56,7 +68,7 @@ class ImageEditor {
       // todo log error here with additional fields
       const width = getDimensions(ad).width
       const height = getDimensions(ad).height
-      const [imageBuffer, error] = await this.fitInside(
+      const [imageBuffer, error] = await this._fitInside(
           ad.fullImageBinary,
           width,
           height,
