@@ -64,7 +64,6 @@ class AdsSnapshot {
             left: (ad.fromX - 1) * 10
         }
         this.overlays.push(newOverlay)
-        console.log(newOverlay)
         this.linksMapJSON = this._addToLinksMapJSON(this.linksMapJSON, ad)
         this.latestEventId = ad.ID
         if ( ad.downloadTimestamp > this.latestDownloadTimestamp ) {

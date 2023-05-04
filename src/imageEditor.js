@@ -16,14 +16,7 @@ class ImageEditor {
   }
 
   async blankImage(width, height) {
-    return sharp({
-      create: {
-        width: width,
-        height: height,
-        channels: 3,
-        background: { r: 255, g: 255, b: 255 } // white background
-      }
-    }).toBuffer()
+    return await sharp("static/1x1.png").toBuffer()
   }
 
     async _fitInside(imageBuffer, width, height, fit, noEnlargement) {

@@ -211,6 +211,7 @@ from block ${ buySellFromBlock } to ${ buySellEvents.blockNumber }`)
     const earliestID = await db.getEarliestAdIdAfterTimestamp(
         adsSnapshot.getBGLatestAdDownloadTimestamp())
     if (earliestID && earliestID < adsSnapshot.getBGLatestAdID()) {
+        logger.info(`Ad ID ${earliestID} is earlier than the last in current snapshot. Looking for earlier snapshot to use as background.`)
         let prevSnapshot = await db.getAdsSnapshotBeforeID(earliestID)
         if (prevSnapshot == null) { return }
         adsSnapshot = new AdsSnapshot(prevSnapshot, snapshotOptions)
@@ -218,11 +219,14 @@ from block ${ buySellFromBlock } to ${ buySellEvents.blockNumber }`)
 
     // retrieve ads with higher ID, sorted  by ID
     // (returns cursor)
+    logger.debug(`Using snapshot ${adsSnapshot.getBGLatestAdID()} as background`)
     const adsToBeAdded = await db.getAdsFromID(adsSnapshot.getBGLatestAdID())
+    let adsCount = 0
     for await (const ad of adsToBeAdded) {
         await adsSnapshot.overlay(ad)  // overlay new ads
+        adsCount++
     }
-    logger.debug("before saving snapshot")
+    logger.debug(`Got ${ adsCount } ads to overlay`)
     // save new snapshot to db (saving only fully processed snapshots)
     if ( adsSnapshot.gotOverlays() ) {
         const bigPicBinary = await adsSnapshot.getMergedBigPic()
