@@ -177,10 +177,10 @@ from block ${ buySellFromBlock } to ${ buySellEvents.blockNumber }`)
         if ( fullImageBinary ) {
             let ie = new ImageEditor(config)
             // image for thumbnail will fit configured size
-            const thumb = await ie.getImageThumbBinary(ad)
+            const thumb = await ie.getImageThumbBinary(fullImageBinary, ad)
             // image for pixelMap will resize ignoring aspect ratio
             // will also enlarge image if too small
-            const px = await ie.getImageForPixelMap(ad)
+            const px = await ie.getImageForPixelMap(fullImageBinary, ad)
             if ( thumb && px ) {
                 // adding ts again for the case when laggards get downloaded and resized
                 // this is actually real successful download ts

@@ -19,6 +19,10 @@ class ImageEditor {
     return await sharp("static/1x1.png").toBuffer()
   }
 
+  async bufferize(binaryImage) {
+    return await sharp(binaryImage).toBuffer()
+  }
+
     async _fitInside(imageBuffer, width, height, fit, noEnlargement) {
         try {
             return [await sharp(imageBuffer)
@@ -46,10 +50,10 @@ class ImageEditor {
         .toBuffer();
     }
 
-    async getImageThumbBinary(ad) {
+    async getImageThumbBinary(fullImageBinary, ad) {
       // todo log error here with additional fields
       const [imageBuffer, error] = await this._fitInside(
-        ad.fullImageBinary,
+        fullImageBinary,
         this.conf.thumbnailParams.width,
         this.conf.thumbnailParams.height,
         'inside',
@@ -57,12 +61,12 @@ class ImageEditor {
       return imageBuffer
     }
 
-    async getImageForPixelMap(ad) {
+    async getImageForPixelMap(fullImageBinary, ad) {
       // todo log error here with additional fields
       const width = getDimensions(ad).width
       const height = getDimensions(ad).height
       const [imageBuffer, error] = await this._fitInside(
-          ad.fullImageBinary,
+          fullImageBinary,
           width,
           height,
           'fill',
