@@ -64,7 +64,8 @@ class AdsSnapshot {
         const ie = new ImageEditor({})
         const newOverlay = { 
             // put 1 px if imageForPixelMap is null
-            input: ad.imageForPixelMap ? ad.imageForPixelMap : await ie.blankImage(1,1),
+            // note: buffer key is 
+            input: ad.imageForPixelMap ? ad.imageForPixelMap.buffer : await ie.blankImage(1,1),
             top: (ad.fromY - 1) * 10,
             left: (ad.fromX - 1) * 10
         }
@@ -88,6 +89,8 @@ class AdsSnapshot {
                 this.bgBinary =
                     await ie.createBackgroundImage(this.defaultBgPath)
             }
+            // TODO bgBinary (bicPicBinary) is not saved now. 
+            // TODO check that retrieving background works (buffer stuff)
             this.mergedBigPic = await ie.overlayAds(
                 this.bgBinary,
                 this.overlays

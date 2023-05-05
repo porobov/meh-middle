@@ -4,8 +4,8 @@ const { logger } = require("./logger.js")
 const MODULE_NAME = "image-editor"
 function getDimensions(adRecord) {
     return {
-        width: (1 + adRecord.toX - adRecord.fromX),
-        height: (1 + adRecord.toY - adRecord.fromY)
+        width: (1 + adRecord.toX - adRecord.fromX) * 10,
+        height: (1 + adRecord.toY - adRecord.fromY) * 10
     }
 }
 

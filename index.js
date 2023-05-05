@@ -155,6 +155,7 @@ from block ${ buySellFromBlock } to ${ buySellEvents.blockNumber }`)
         let fullImageBinary = null
         if (downloadResult) { 
             // full image binary is a temporary value. It shouldn't be save to db
+            // TODO check this out binary got its own fields
             fullImageBinary = downloadResult.binary
             updates.imageExtension = downloadResult.extension
             logger.info(`Downloaded ${downloadResult.extension} image`)
@@ -246,13 +247,14 @@ from block ${ buySellFromBlock } to ${ buySellEvents.blockNumber }`)
             latestEventId: adsSnapshot.getLatestAdID(),
             latestDownloadTimestamp: adsSnapshot.getLatestAdDownloadTimestamp(),
             linksMapJSON: adsSnapshot.getLinksMapJSON(),
-            bigPicBinary: bigPicBinary,
+            bigPicBinary: bigPicBinary,  // is used as background
             adsBigPicUrl: await wg.uploadAdsSnapshotPic(bigPicBinary)
         }
         // logger.info(`Built new Ads snapshot with latest event ID ${ newSnapshot.latestEventId }`)
         // check snapshot validity (important as we are not catching upload errors)
         // these are zero snapshot params (see db)
         if (
+            // not checking for latestDownloadTimestamp is it ok?
             newSnapshot.latestEventId > 0
             && newSnapshot.linksMapJSON != '[]'
             && newSnapshot.bigPicBinary != null
@@ -263,7 +265,7 @@ from block ${ buySellFromBlock } to ${ buySellEvents.blockNumber }`)
                 logger.info(`Saved snapshot with latest ad ID: ${newSnapshot.latestEventId}`)
             }
         } else {
-            logger.error(`Snapshot got overlays, but some values are null. Latest buySell ID: ${newSnapshot.latestEventId}`)
+            logger.error(`Ads snapshot got overlays, but some values are null. Latest buySell ID: ${newSnapshot.latestEventId}`)
         }
     }
 
@@ -298,7 +300,7 @@ from block ${ buySellFromBlock } to ${ buySellEvents.blockNumber }`)
                 logger.info(`Saved buySell snapshot. Latest buySell ID: ${ newSnapshot.latestEventId }`)
             }
         } else {
-            logger.error(`Snapshot got overlays, but some values are null. Latest buySell ID: ${ newSnapshot.latestEventId }`)
+            logger.error(`Buy sell snapshot got overlays, but some values are null. Latest buySell ID: ${ newSnapshot.latestEventId }`)
         }
     }
     
