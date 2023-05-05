@@ -36,15 +36,15 @@ class WebGateway {
     // const path = Path.resolve(__dirname, imageName, imageFormat)
     // const writer = fs.createWriteStream(path)
     fs.writeFileSync(filename, imageBuffer, 'binary', (err) => {
-      if (err) throw err;
-      logger.info(`The file ${filename} has been saved!`);
-    });
+      if (err) throw err
+    })
+    logger.debug(`The image ${filename} has been saved!`);
   }
 
   // debug function
   _saveObjectToFile(data, fileName) {
     fs.writeFileSync(fileName, data);
-    logger.info(`The file ${ fileName } has been saved!`);
+    logger.debug(`The file ${ fileName } has been saved!`);
   }
 
   async _getImageSize(url) {

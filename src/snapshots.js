@@ -19,6 +19,7 @@ class AdsSnapshot {
     // expects an empty object if no snapshots exist yet
     constructor(previousSnapshot, options) {
         this.bg = previousSnapshot
+        this.latestDownloadTimestamp = this.bg.latestDownloadTimestamp
         this.latestEventId = previousSnapshot.latestEventId
         this.linksMapJSON = previousSnapshot.linksMapJSON
         this.bgBinary = previousSnapshot.bigPicBinary
@@ -48,6 +49,10 @@ class AdsSnapshot {
 
     getBGLatestAdDownloadTimestamp() {
         return this.bg.latestDownloadTimestamp
+    }
+
+    getLatestAdDownloadTimestamp() {
+        return this.latestDownloadTimestamp
     }
 
     // overlays an ad over given snapshot

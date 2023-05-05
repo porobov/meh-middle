@@ -41,7 +41,7 @@ class ImageEditor {
     }
 
     async createBackgroundImage(source){
-      logger.info(`Creating blank backgroud image`)
+      logger.debug(`Creating blank backgroud image`)
       return await sharp(source)
         .toBuffer();
     }

@@ -59,11 +59,6 @@ async function mainLoop() {
     let newEvents = await contract.getEvents(NEW_IMAGE_EVENT_NAME, fromBlock)
     if ( newEvents == null ) { return }
 
-    logger.info(
-`Received ${newEvents.decodedEvents.length} \
-new ${ NEW_IMAGE_EVENT_NAME } events \
-from block ${ fromBlock } to ${newEvents.blockNumber}`)
-
     const formatedEvents = newEvents.decodedEvents.map(ev => {
       return {
         ID: ev.args.ID.toNumber(),
@@ -82,12 +77,25 @@ from block ${ fromBlock } to ${newEvents.blockNumber}`)
       }
     })
 
+    logger.info(
+`Received ${formatedEvents.length} \
+new ${ NEW_IMAGE_EVENT_NAME } events \
+from block ${ fromBlock } to ${newEvents.blockNumber}`)
+
     // save new events and block number to db
-    if (formatedEvents.length > 0 &&  newEvents.blockNumber > 0 ) {
-        const insertsCount = await db.addAdsEvents(formatedEvents)
-        logger.info(`${ insertsCount } new events were written to db`)
+    let insertsCount = 0
+    if (formatedEvents.length > 0 && newEvents.blockNumber > 0 ) {
+        insertsCount = await db.addAdsEvents(formatedEvents)
+        logger.info(`${ insertsCount } new ${ NEW_IMAGE_EVENT_NAME } events were written to db`)
+        // TODO block number is not saved if no events are present (same for buy sell)
+        // TODO do not save block number if insertCount mismatch
+    }
+
+    if (formatedEvents.length == insertsCount && newEvents.blockNumber > 0 ) {
         let saved = await db.saveLatestBlockForEvent(NEW_IMAGE_EVENT_NAME, newEvents.blockNumber)
         logger.info(`${ saved ? "Saved" : "FAILED TO SAVE" } block ${newEvents.blockNumber} for ${NEW_IMAGE_EVENT_NAME} event to db`)
+    } else {
+        logger.error(`Retrieved from chain and saved ${NEW_IMAGE_EVENT_NAME} events mismatch`)
     }
 
     // NEWSTATUS
@@ -98,10 +106,6 @@ from block ${ fromBlock } to ${newEvents.blockNumber}`)
     
     // get events
     let buySellEvents = await contract.getEvents(BUY_SELL_EVENT_NAME, buySellFromBlock)
-    logger.info(
-`Received ${ buySellEvents.decodedEvents.length } \
-new ${ BUY_SELL_EVENT_NAME } events \
-from block ${ buySellFromBlock } to ${ buySellEvents.blockNumber }`)
 
     const formatedBuySellEvents = buySellEvents.decodedEvents.map(ev => {
         return {
@@ -115,15 +119,24 @@ from block ${ buySellFromBlock } to ${ buySellEvents.blockNumber }`)
         }
       })
 
+      logger.info(
+`Received ${ formatedBuySellEvents.length } \
+new ${ BUY_SELL_EVENT_NAME } events \
+from block ${ buySellFromBlock } to ${ buySellEvents.blockNumber }`)
+
     // save new events and block number to db
+    let bsInsertsCount = 0
     if ( formatedBuySellEvents.length > 0 && buySellEvents.blockNumber > 0 ) {
-        const insertsCount = await db.addBuySellEvents(formatedBuySellEvents)
-        logger.info(`${ insertsCount } new ${ BUY_SELL_EVENT_NAME } events were written to db`)
-        let saved = await db.saveLatestBlockForEvent(BUY_SELL_EVENT_NAME, buySellEvents.blockNumber)
-        logger.info(`${ saved ? "Saved" : "FAILED TO SAVE" } block ${buySellEvents.blockNumber} for ${ BUY_SELL_EVENT_NAME } event to db`)
+        bsInsertsCount = await db.addBuySellEvents(formatedBuySellEvents)
+        logger.info(`${ bsInsertsCount } new ${ BUY_SELL_EVENT_NAME } events were written to db`)
     }
 
-
+    if (formatedBuySellEvents.length == bsInsertsCount && buySellEvents.blockNumber > 0 ) {
+        let saved = await db.saveLatestBlockForEvent(BUY_SELL_EVENT_NAME, buySellEvents.blockNumber)
+        logger.info(`${ saved ? "Saved" : "FAILED TO SAVE" } block ${buySellEvents.blockNumber} for ${ BUY_SELL_EVENT_NAME } event to db`)
+    } else {
+        logger.error(`Retrieved from chain and saved ${ BUY_SELL_EVENT_NAME } events mismatch`)
+    }
 
 
     // PREPARE DATA FOR ADS SNAPSHOT
@@ -211,15 +224,14 @@ from block ${ buySellFromBlock } to ${ buySellEvents.blockNumber }`)
     const earliestID = await db.getEarliestAdIdAfterTimestamp(
         adsSnapshot.getBGLatestAdDownloadTimestamp())
     if (earliestID && earliestID < adsSnapshot.getBGLatestAdID()) {
-        logger.info(`Ad ID ${earliestID} is earlier than the last in current snapshot. Looking for earlier snapshot to use as background.`)
         let prevSnapshot = await db.getAdsSnapshotBeforeID(earliestID)
         if (prevSnapshot == null) { return }
         adsSnapshot = new AdsSnapshot(prevSnapshot, snapshotOptions)
+        logger.info(`Ad ID ${earliestID} is earlier than the last in current snapshot. Using snapshot ${adsSnapshot.getBGLatestAdID()} as background.`)
     }
 
     // retrieve ads with higher ID, sorted  by ID
     // (returns cursor)
-    logger.debug(`Using snapshot ${adsSnapshot.getBGLatestAdID()} as background`)
     const adsToBeAdded = await db.getAdsFromID(adsSnapshot.getBGLatestAdID())
     let adsCount = 0
     for await (const ad of adsToBeAdded) {
@@ -232,6 +244,7 @@ from block ${ buySellFromBlock } to ${ buySellEvents.blockNumber }`)
         const bigPicBinary = await adsSnapshot.getMergedBigPic()
         const newSnapshot =  {
             latestEventId: adsSnapshot.getLatestAdID(),
+            latestDownloadTimestamp: adsSnapshot.getLatestAdDownloadTimestamp(),
             linksMapJSON: adsSnapshot.getLinksMapJSON(),
             bigPicBinary: bigPicBinary,
             adsBigPicUrl: await wg.uploadAdsSnapshotPic(bigPicBinary)
@@ -246,6 +259,7 @@ from block ${ buySellFromBlock } to ${ buySellEvents.blockNumber }`)
             && newSnapshot.adsBigPicUrl != null
         ) {
             if (await db.saveAdsSnapshot(newSnapshot)) {
+                // TODO cannot see an actually saved snapshot in mongo interface (retrieving results for site data works fine)
                 logger.info(`Saved snapshot with latest ad ID: ${newSnapshot.latestEventId}`)
             }
         } else {
@@ -340,6 +354,7 @@ async function main() {
             throw e
         } finally {
             await db.close()
+            logger.debug(`================= CLOSING DB =================`)
         }
         setTimeout(await interval(), MAIN_LOOP_INTERVAL_MS)
     }

@@ -83,10 +83,18 @@ class DB {
     const p = await this.state.insertOne(emptyStateRecord)
   }
 
-  async createCollectionWithUniqueID(collection) {
+  // collections with unique ID field
+  async createEventsCollection(collection) {
     await this.dropCollection(collection)
     logger.info(`Creating collection ${collection.collectionName}`)
-    await this.ads.createIndex({ "ID": 1 }, { unique: true })
+    await collection.createIndex({ "ID": 1 }, { unique: true })
+  }
+
+  // collections with unique latestEventId field
+  async createSnapshotCollection(collection) {
+    await this.dropCollection(collection)
+    logger.info(`Creating collection ${collection.collectionName}`)
+    await collection.createIndex({ "latestEventId": 1 }, { unique: true })
   }
 
   // snapshot to be returned when there are no snapshots yet
@@ -120,8 +128,11 @@ class DB {
 
   async createDB() {
     await this.createEmptyStateRecord()
-    for (const collection of [this.ads, this.buySells, this.adsSnapshots, this.buySellSnapshots]) {
-      await this.createCollectionWithUniqueID(collection)
+    for (const collection of [this.ads, this.buySells]) {
+      await this.createEventsCollection(collection)
+    }
+    for (const collection of [this.adsSnapshots, this.buySellSnapshots]) {
+      await this.createSnapshotCollection(collection)
     }
     await this.putEmptyAdsSnapshot()
     await this.putEmptyBuySellSnapshot()
@@ -264,6 +275,7 @@ class DB {
   // TODO make it save or update. 
   // new snapshot may include newly downloaded images for old ad IDs
   async _saveSnapshot(collection, newSnapshot) {
+    logger.debug(`Saving ${collection.collectionName} snapshot`)
     const [res, err] = await withErrorHandling(
       async () => {
         // remove stale snapshot (one in - one out)
@@ -271,10 +283,13 @@ class DB {
         if (count > this.conf.maxStoredSnapshots) {
           collection.findOneAndDelete({}, { sort: { latestEventId: 1 } })
         }
-        return await collection.insertOne(newSnapshot)
+        const filter = { "latestEventId": newSnapshot.latestEventId }
+        const update = { $set: newSnapshot } 
+        // return await collection.insertOne(newSnapshot)
+        return await collection.updateOne(filter, update, { upsert: true })
       },
       "_saveSnapshot")
-    if (res && Object.hasOwn(res, 'insertedCount') && res.insertedCount == 1) {
+    if (res && res.acknowledged) {
       return true
     } else {
       return false
