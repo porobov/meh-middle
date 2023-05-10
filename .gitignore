@@ -4,3 +4,5 @@ artifacts/
 cache/
 logs/
 playground/
+.DS_Store
+
