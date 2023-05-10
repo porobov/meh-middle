@@ -85,14 +85,9 @@ class AdsSnapshot {
     async getMergedBigPic(){
         if (!this.mergedBigPic) {
             let ie = new ImageEditor({})
-            if ( this.bgBinary == null ) {
-                this.bgBinary =
-                    await ie.createBackgroundImage(this.defaultBgPath)
-            }
-            // TODO bgBinary (bicPicBinary) is not saved now. 
             // TODO check that retrieving background works (buffer stuff)
             this.mergedBigPic = await ie.overlayAds(
-                this.bgBinary,
+                this.bgBinary.buffer,
                 this.overlays
             )
         }

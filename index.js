@@ -4,7 +4,7 @@ const hre = require("hardhat");
 const { WebGateway } = require("./src/web.js")
 const { ImageEditor } = require("./src/imageEditor.js")
 const { AdsSnapshot, BuySellSnapshot } = require("./src/snapshots.js")
-const { logger } = require("./src/logger.js");
+const { logger } = require("./src/logger.js")
 
 // config
 const config = hre.config.dbConf
@@ -248,7 +248,7 @@ from block ${ buySellFromBlock } to ${ buySellEvents.blockNumber }`)
             latestDownloadTimestamp: adsSnapshot.getLatestAdDownloadTimestamp(),
             linksMapJSON: adsSnapshot.getLinksMapJSON(),
             bigPicBinary: bigPicBinary,  // is used as background
-            adsBigPicUrl: await wg.uploadAdsSnapshotPic(bigPicBinary)
+            adsBigPicUrl: bigPicBinary ? await wg.uploadAdsSnapshotPic(bigPicBinary) : null
         }
         // logger.info(`Built new Ads snapshot with latest event ID ${ newSnapshot.latestEventId }`)
         // check snapshot validity (important as we are not catching upload errors)

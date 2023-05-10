@@ -33,21 +33,27 @@ class ImageEditor {
               .toBuffer(),
               null]
           } catch (err) {
-            logger.error(err, { module: MODULE_NAME })
+            logger.error(err, { module: MODULE_NAME, function: "_fitInside" })
             return [null, err]
           }
     }
 
     async overlayAds(background, ads) {
-      return await sharp(background)
-        .composite(ads)
-        .toBuffer();
+      try {
+        const composite = await sharp(background)
+          .composite(ads)
+          .toBuffer();
+        return composite
+      } catch (e) {
+        logger.error(e, { module: MODULE_NAME, function: "overlayAds" })
+        return null
+      }
     }
 
     async createBackgroundImage(source){
       logger.debug(`Creating blank backgroud image`)
       return await sharp(source)
-        .toBuffer();
+        .toBuffer()
     }
 
     async getImageThumbBinary(fullImageBinary, ad) {

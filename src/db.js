@@ -1,4 +1,5 @@
 const { MongoClient } = require("mongodb")
+const { ImageEditor } = require("./imageEditor.js")
 const chalk = require("chalk")
 const { logger } = require("./logger.js")
 
@@ -99,11 +100,13 @@ class DB {
 
   // snapshot to be returned when there are no snapshots yet
   async putEmptyAdsSnapshot() {
+    let ie = new ImageEditor({})
     let emptySnapshot = {
-      // also see snapshot validity check 
+      // see snapshot validity check 
+      // note that background is created here
       latestEventId: 0, // this is also unique ID of the snapshot
       bigPicUrl: null,
-      bigPicBinary: null,
+      bigPicBinary: await ie.createBackgroundImage(this.conf.default_bg_path),
       linksMapJSON: '[]',
       latestDownloadTimestamp: 0
     }
