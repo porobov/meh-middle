@@ -266,7 +266,7 @@ class DB {
     let query = { ID: { $gt: ID } }
     let options = { sort: { ID: 1 } }
     const [res, err] = await withErrorHandling(
-      async () => await collection.find(query, options),
+      async () => await collection.find(query, options).limit(this.conf.maxEventsPerSnapshot),
       "_getEventsFromID")
     if (res) {
       return res
@@ -284,6 +284,7 @@ class DB {
         // remove stale snapshot (one in - one out)
         const count = await collection.countDocuments()
         if (count > this.conf.maxStoredSnapshots) {
+          logger.debug(`Removed stale snapshot`)
           collection.findOneAndDelete({}, { sort: { latestEventId: 1 } })
         }
         const filter = { "latestEventId": newSnapshot.latestEventId }
