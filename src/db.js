@@ -284,8 +284,8 @@ class DB {
         // remove stale snapshot (one in - one out)
         const count = await collection.countDocuments()
         if (count > this.conf.maxStoredSnapshots) {
-          logger.debug(`Removed stale snapshot`)
-          collection.findOneAndDelete({}, { sort: { latestEventId: 1 } })
+          logger.debug(`Removed stale snapshot (higher than 0 snapshot)`)
+          collection.findOneAndDelete({ latestEventId: { $gt: 0 }}, { sort: { latestEventId: 1 } })
         }
         const filter = { "latestEventId": newSnapshot.latestEventId }
         const update = { $set: newSnapshot } 
