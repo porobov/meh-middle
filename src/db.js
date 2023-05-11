@@ -117,7 +117,6 @@ class DB {
   }
 
   async putEmptyBuySellSnapshot() {
-    // TODO latestEventID instead of TxID
     let emptySnapshot = {
       // also see snapshot validity check 
       latestEventId: 0,
@@ -275,7 +274,6 @@ class DB {
     }
   }
 
-  // TODO make it save or update. 
   // new snapshot may include newly downloaded images for old ad IDs
   async _saveSnapshot(collection, newSnapshot) {
     logger.debug(`Saving ${collection.collectionName} snapshot`)

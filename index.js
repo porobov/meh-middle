@@ -87,8 +87,6 @@ from block ${ fromBlock } to ${newEvents.blockNumber}`)
     if (formatedEvents.length > 0 && newEvents.blockNumber > 0 ) {
         insertsCount = await db.addAdsEvents(formatedEvents)
         logger.info(`${ insertsCount } new ${ NEW_IMAGE_EVENT_NAME } events were written to db`)
-        // TODO block number is not saved if no events are present (same for buy sell)
-        // TODO do not save block number if insertCount mismatch
     }
 
     if (formatedEvents.length == insertsCount && newEvents.blockNumber > 0 ) {
@@ -153,9 +151,7 @@ from block ${ buySellFromBlock } to ${ buySellEvents.blockNumber }`)
         let [ downloadResult, error ] = await wg.downloadImage(ad.imageSourceUrl)
         let fullImageBinary = null
         if (downloadResult) { 
-            // full image binary is a temporary value. It shouldn't be save to db
-            // TODO check this out binary got its own fields
-            fullImageBinary = downloadResult.binary
+            fullImageBinary = downloadResult.binary  // note .binary here
             updates.imageExtension = downloadResult.extension
             logger.info(`Downloaded ${downloadResult.extension} image`)
         } else {
@@ -200,7 +196,6 @@ from block ${ buySellFromBlock } to ${ buySellEvents.blockNumber }`)
         })
     }
 
-    // TODO do not fix invalid input error yet
     let updatesCount = await db.appendImagesToAds(adUpdates)
     if ( updatesCount > 0 ) {
         logger.info(`Updated ${ updatesCount } images in the db`)
