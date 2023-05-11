@@ -77,7 +77,7 @@ async function mainLoop() {
       }
     })
 
-    logger.info(
+    logger.debug(
 `Received ${formatedEvents.length} \
 new ${ NEW_IMAGE_EVENT_NAME } events \
 from block ${ fromBlock } to ${newEvents.blockNumber}`)
@@ -93,7 +93,7 @@ from block ${ fromBlock } to ${newEvents.blockNumber}`)
 
     if (formatedEvents.length == insertsCount && newEvents.blockNumber > 0 ) {
         let saved = await db.saveLatestBlockForEvent(NEW_IMAGE_EVENT_NAME, newEvents.blockNumber)
-        logger.info(`${ saved ? "Saved" : "FAILED TO SAVE" } block ${newEvents.blockNumber} for ${NEW_IMAGE_EVENT_NAME} event to db`)
+        logger.debug(`${ saved ? "Saved" : "FAILED TO SAVE" } block ${newEvents.blockNumber} for ${NEW_IMAGE_EVENT_NAME} event to db`)
     } else {
         logger.error(`Retrieved from chain and saved ${NEW_IMAGE_EVENT_NAME} events mismatch`)
     }
@@ -119,7 +119,7 @@ from block ${ fromBlock } to ${newEvents.blockNumber}`)
         }
       })
 
-      logger.info(
+      logger.debug(
 `Received ${ formatedBuySellEvents.length } \
 new ${ BUY_SELL_EVENT_NAME } events \
 from block ${ buySellFromBlock } to ${ buySellEvents.blockNumber }`)
@@ -133,7 +133,7 @@ from block ${ buySellFromBlock } to ${ buySellEvents.blockNumber }`)
 
     if (formatedBuySellEvents.length == bsInsertsCount && buySellEvents.blockNumber > 0 ) {
         let saved = await db.saveLatestBlockForEvent(BUY_SELL_EVENT_NAME, buySellEvents.blockNumber)
-        logger.info(`${ saved ? "Saved" : "FAILED TO SAVE" } block ${buySellEvents.blockNumber} for ${ BUY_SELL_EVENT_NAME } event to db`)
+        logger.debug(`${ saved ? "Saved" : "FAILED TO SAVE" } block ${buySellEvents.blockNumber} for ${ BUY_SELL_EVENT_NAME } event to db`)
     } else {
         logger.error(`Retrieved from chain and saved ${ BUY_SELL_EVENT_NAME } events mismatch`)
     }
@@ -144,7 +144,6 @@ from block ${ buySellFromBlock } to ${ buySellEvents.blockNumber }`)
     // get ads with no images (not downloaded)
     let ads = await db.getAdsNoImages()
     let adUpdates = []
-    logger.info(`Got ads with no images.`)
 
     // download images and save to db
     let wg = new WebGateway(config)
@@ -250,7 +249,6 @@ from block ${ buySellFromBlock } to ${ buySellEvents.blockNumber }`)
             bigPicBinary: bigPicBinary,  // is used as background
             adsBigPicUrl: bigPicBinary ? await wg.uploadAdsSnapshotPic(bigPicBinary) : null
         }
-        // logger.info(`Built new Ads snapshot with latest event ID ${ newSnapshot.latestEventId }`)
         // check snapshot validity (important as we are not catching upload errors)
         // these are zero snapshot params (see db)
         if (
@@ -261,7 +259,6 @@ from block ${ buySellFromBlock } to ${ buySellEvents.blockNumber }`)
             && newSnapshot.adsBigPicUrl != null
         ) {
             if (await db.saveAdsSnapshot(newSnapshot)) {
-                // TODO cannot see an actually saved snapshot in mongo interface (retrieving results for site data works fine)
                 logger.info(`Saved snapshot with latest ad ID: ${newSnapshot.latestEventId}`)
             }
         } else {
@@ -328,9 +325,9 @@ from block ${ buySellFromBlock } to ${ buySellEvents.blockNumber }`)
     ) {
         const isServing = await wg.publish(JSON.stringify(siteData, null, 2))
         if (isServing) {
-            logger.info(`Site data publised. Latest blocks checked: \
+            logger.info(`====== Publised. Latest blocks checked for \
 NewImage: ${siteData.newImageLatestCheckedBlock}, \
-BuySell: ${siteData.buySellLatestCheckedBlock} `)
+BuySell: ${siteData.buySellLatestCheckedBlock} ======`)
         }
     } else {
         logger.error("Built wrong site data. Some values are absent", siteData)
@@ -357,7 +354,7 @@ async function main() {
     async function interval() {
         try {
             isExecuting = true
-            logger.info(`================= STARTING NEW CYCLE =================`)
+            logger.debug(`================= STARTING NEW CYCLE =================`)
             if ( await db.connect() ) {
                 await mainLoop()
             }
@@ -366,7 +363,7 @@ async function main() {
         } finally {
             await db.close()
             isExecuting = false
-            logger.debug(`================= CLOSING DB. NEXT CYCLE IN ${MAIN_LOOP_INTERVAL_MS} ms =================`)
+            logger.debug(`================= CLOSING DB. NEXT CYCLE IN ${ MAIN_LOOP_INTERVAL_MS } ms =================`)
             if ( cancelNextCycle ) {
                 resolve()
             } else {

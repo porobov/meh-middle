@@ -1,16 +1,19 @@
 const { logger } = require("ethers")
 const { ImageEditor } = require("./imageEditor.js")
 
-// TODO make it for ads snapshot as well
+function _blockID(x, y) {
+    return (y - 1) * 100 + x;
+  }
+
 function _addToJsonMap(bgJson, coords, entry) {
     let parsedMap = JSON.parse(bgJson)
     for (let x = coords.fromX; x == coords.toX; x++) {
         for (let y = coords.fromY; y == coords.toY; y++) {
-            if (!parsedMap[x]) { parsedMap[x] = [] }
-            parsedMap[x][y] = entry
+            let blockID = _blockID(x, y)
+            parsedMap[blockID] = { x: x, y: y , ...entry}
         }
     }
-    return JSON.stringify(parsedMap)
+    return JSON.stringify(parsedMap, null, 2)
 }
 
 class AdsSnapshot {

@@ -107,7 +107,7 @@ class DB {
       latestEventId: 0, // this is also unique ID of the snapshot
       bigPicUrl: null,
       bigPicBinary: await ie.createBackgroundImage(this.conf.default_bg_path),
-      linksMapJSON: '[]',
+      linksMapJSON: '{}',
       latestDownloadTimestamp: 0
     }
     const [res, err] = await withErrorHandling(
@@ -121,7 +121,7 @@ class DB {
     let emptySnapshot = {
       // also see snapshot validity check 
       latestEventId: 0,
-      ownershipMapJSON: '[]'
+      ownershipMapJSON: '{}'
     }
     const [res, err] = await withErrorHandling(
       async () => await this.buySellSnapshots.insertOne(emptySnapshot),
