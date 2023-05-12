@@ -22,6 +22,7 @@
     "typechain": "^8.1.0"
   },
   "dependencies": {
+    "@kikobeats/cloudflare-workers-kv": "^1.0.11",
     "axios": "^1.3.4",
     "chalk": "^4",
     "dotenv": "^16.0.3",

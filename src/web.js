@@ -3,10 +3,12 @@ const Path = require('path')
 const axios = require('axios')
 const { logger } = require("./logger.js")
 const ufs = require("url-file-size")
+const cloudFlareWorkersKV = require('@kikobeats/cloudflare-workers-kv')
 
 class WebGateway {
   
   constructor(conf) {
+    this.conf = conf
     this.SUPPORTED_FORMATS = conf.supportedFormats
   }
   
@@ -60,7 +62,23 @@ class WebGateway {
   async publish(JSON_siteData){
     const fileName = "./logs/hey.json"
     this._saveObjectToFile(JSON_siteData, fileName)
+    await this._publishToCF(JSON_siteData)
     return fileName
+  }
+
+  // https://developers.cloudflare.com/api/operations/workers-kv-namespace-write-key-value-pair-with-metadata
+  async _publishToCF(JSON_siteData) {
+    
+  const store = cloudFlareWorkersKV({
+    accountId: this.conf.cfAccountID,
+    key: this.conf.cfApiToken,
+    namespaceId: this.conf.cfNamespaceId
+  })
+  // TODO error handling
+  console.log(await store.set('foo', JSON.stringify(JSON_siteData)))
+
+  // get a value
+  console.log(await store.get('foo'))
   }
 }
 module.exports = {

@@ -11,7 +11,7 @@ module.exports = {
     buySellEventName: "NewAreaStatus",
     imagesBatchSize: 30, // number of ads images downloaded within one cycle
     maxEventsPerSnapshot: 10,  // number of events retrieved per run per snapshot (small values used for testing)
-    maxStoredSnapshots: 10, // if more are present in db the earliest will be deleted
+    maxStoredSnapshots: 2, // if more are present in db the earliest will be deleted
     supportedFormats: ["jpg", "png", "gif", "tif"], // , "bmp"] // , "jp2", "jpm", "jpx"]
     nextRetryDelay: 1000 * 60 * 5, // 5 minutes - will retry to download. next attempt will be twice long
     maxNumOfDownloadAttempts: 5,  // number of download attempts for image
@@ -19,6 +19,9 @@ module.exports = {
     thumbnailParams: { width: 400, height: 400 },
     default_bg_path: "./static/bg.png", // path to bg image for pixelmap
     mainLoopIntervalMs: 1000,  // 10 second (actually a pause between cycles)
+    cfApiToken: process.env.CF_API_TOKEN !== undefined ? process.env.CF_API_TOKEN : "",
+    cfNamespaceId: process.env.CF_NAMESPACE_ID !== undefined ? process.env.CF_NAMESPACE_ID : "",
+    cfAccountID: process.env.CF_ACCOUNT_ID !== undefined ? process.env.CF_ACCOUNT_ID : "",
   },
   solidity: "0.8.18",
 	defaultNetwork: "localhost",
