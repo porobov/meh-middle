@@ -22,6 +22,7 @@ module.exports = {
     mainLoopIntervalMs: 1000,  // 10 second (actually a pause between cycles)
     cfApiToken: process.env.CF_API_TOKEN !== undefined ? process.env.CF_API_TOKEN : "",
     cfNamespaceId: process.env.CF_NAMESPACE_ID !== undefined ? process.env.CF_NAMESPACE_ID : "",
+    cfPreviewNamespaceID: process.env.CF_PREVIEW_NAMESPACE_ID !== undefined ? process.env.CF_PREVIEW_NAMESPACE_ID : "",
     cfAccountID: process.env.CF_ACCOUNT_ID !== undefined ? process.env.CF_ACCOUNT_ID : "",
   },
   solidity: "0.8.18",

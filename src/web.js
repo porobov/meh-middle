@@ -67,14 +67,21 @@ class WebGateway {
   }
 
   // https://developers.cloudflare.com/api/operations/workers-kv-namespace-write-key-value-pair-with-metadata
+  // publishig both to production and preview namespaces
   async _publishToCF(JSON_siteData, keyName) {
     const store = cloudFlareWorkersKV({
       accountId: this.conf.cfAccountID,
       key: this.conf.cfApiToken,
       namespaceId: this.conf.cfNamespaceId
     })
+    const previewStore = cloudFlareWorkersKV({
+      accountId: this.conf.cfAccountID,
+      key: this.conf.cfApiToken,
+      namespaceId: this.conf.cfPreviewNamespaceID
+    })
     // TODO error handling
     console.log(await store.set(keyName, JSON.stringify(JSON_siteData)))
+    console.log(await previewStore.set(keyName, JSON.stringify(JSON_siteData)))
   }
 }
 module.exports = {
