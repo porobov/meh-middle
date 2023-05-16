@@ -60,10 +60,9 @@ class WebGateway {
   }
 
   async publish(JSON_siteData, keyName){
-    const fileName = "./logs/hey.json"
-    this._saveObjectToFile(JSON_siteData, fileName)
-    await this._publishToCF(JSON_siteData, keyName)
-    return fileName
+    // const fileName = "./logs/hey.json"
+    // this._saveObjectToFile(JSON_siteData, fileName)
+    return await this._publishToCF(JSON_siteData, keyName)
   }
 
   // https://developers.cloudflare.com/api/operations/workers-kv-namespace-write-key-value-pair-with-metadata
@@ -79,9 +78,15 @@ class WebGateway {
       key: this.conf.cfApiToken,
       namespaceId: this.conf.cfPreviewNamespaceID
     })
-    // TODO error handling
-    console.log(await store.set(keyName, JSON.stringify(JSON_siteData)))
-    console.log(await previewStore.set(keyName, JSON.stringify(JSON_siteData)))
+    try {
+      await store.set(keyName, JSON.stringify(JSON_siteData))
+      await previewStore.set(keyName, JSON.stringify(JSON_siteData))
+      logger.debug(`Published key ${ keyName } to production ${ this.conf.cfNamespaceId } and preview ${ this.conf.cfPreviewNamespaceID }`)
+      return true
+    } catch (err) {
+      logger.error(err)
+      return false
+    }
   }
 }
 module.exports = {
