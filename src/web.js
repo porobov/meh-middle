@@ -76,9 +76,6 @@ class WebGateway {
   })
   // TODO error handling
   console.log(await store.set('foo', JSON.stringify(JSON_siteData)))
-
-  // get a value
-  console.log(await store.get('foo'))
   }
 }
 module.exports = {
