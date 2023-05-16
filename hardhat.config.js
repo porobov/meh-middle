@@ -5,6 +5,7 @@ require("dotenv").config();
 module.exports = {
   dbConf: { 
     stateRecordName: "main",  // a single record in state collection is responsible for state
+    middleWareID: process.env.MIDDLEWARE_ID !== undefined ? process.env.MIDDLEWARE_ID : "",
     dbAccessUrl: process.env.MONGO_ACCESS_URL !== undefined ? process.env.MONGO_ACCESS_URL : "",
     dbName: "MillionEther",
     newImageEventName: "NewImage",

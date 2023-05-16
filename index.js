@@ -307,8 +307,8 @@ from block ${ buySellFromBlock } to ${ buySellEvents.blockNumber }`)
         newImageLatestCheckedBlock: await db.getLatestBlockForEvent(NEW_IMAGE_EVENT_NAME),
         buySellLatestCheckedBlock: await db.getLatestBlockForEvent(BUY_SELL_EVENT_NAME),
         mehContractAddress: contractAddress,
-        chain: "mainnet",
-        middleWareID: "SF",
+        chainID: hre.network.config.chainId,
+        middleWareID: config.middleWareID,
         timestamp: Date.now()
     }
     // check that all inportant values are present
@@ -318,9 +318,12 @@ from block ${ buySellFromBlock } to ${ buySellEvents.blockNumber }`)
         && siteData.newImageLatestCheckedBlock > 0
         && siteData.buySellLatestCheckedBlock > 0
     ) {
-        const isServing = await wg.publish(JSON.stringify(siteData, null, 2))
+        const keyName = siteData.middleWareID + siteData.chainID
+        const isServing = await wg.publish(
+                JSON.stringify(siteData, null, 2),
+                keyName)
         if (isServing) {
-            logger.info(`====== Publised. Latest blocks checked for \
+            logger.info(`====== Publised to ${ keyName }. Latest blocks checked for \
 NewImage: ${siteData.newImageLatestCheckedBlock}, \
 BuySell: ${siteData.buySellLatestCheckedBlock} ======`)
         }

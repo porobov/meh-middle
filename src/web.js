@@ -59,23 +59,22 @@ class WebGateway {
     return filename
   }
 
-  async publish(JSON_siteData){
+  async publish(JSON_siteData, keyName){
     const fileName = "./logs/hey.json"
     this._saveObjectToFile(JSON_siteData, fileName)
-    await this._publishToCF(JSON_siteData)
+    await this._publishToCF(JSON_siteData, keyName)
     return fileName
   }
 
   // https://developers.cloudflare.com/api/operations/workers-kv-namespace-write-key-value-pair-with-metadata
-  async _publishToCF(JSON_siteData) {
-    
-  const store = cloudFlareWorkersKV({
-    accountId: this.conf.cfAccountID,
-    key: this.conf.cfApiToken,
-    namespaceId: this.conf.cfNamespaceId
-  })
-  // TODO error handling
-  console.log(await store.set('foo', JSON.stringify(JSON_siteData)))
+  async _publishToCF(JSON_siteData, keyName) {
+    const store = cloudFlareWorkersKV({
+      accountId: this.conf.cfAccountID,
+      key: this.conf.cfApiToken,
+      namespaceId: this.conf.cfNamespaceId
+    })
+    // TODO error handling
+    console.log(await store.set(keyName, JSON.stringify(JSON_siteData)))
   }
 }
 module.exports = {
