@@ -2,12 +2,15 @@ require("@nomicfoundation/hardhat-toolbox");
 require("dotenv").config();
 
 /** @type import('hardhat/config').HardhatUserConfig */
+// to run for other network or for developement change dbName, contract address
 module.exports = {
   dbConf: { 
     stateRecordName: "main",  // a single record in state collection is responsible for state
-    middleWareID: process.env.MIDDLEWARE_ID !== undefined ? process.env.MIDDLEWARE_ID : "",
+    middleWareID: process.env.MIDDLEWARE_ID !== undefined ? process.env.MIDDLEWARE_ID : "", // affects keyName for cloudflare
     dbAccessUrl: process.env.MONGO_ACCESS_URL !== undefined ? process.env.MONGO_ACCESS_URL : "",
-    dbName: "MillionEther",
+    dbName: "MillionEther", // affects keyName for cloudflare
+    contractName: "MillionEther",
+    contractAddress: "0x15dbdB25f870f21eaf9105e68e249E0426DaE916",
     newImageEventName: "NewImage",
     buySellEventName: "NewAreaStatus",
     imagesBatchSize: 30, // number of ads images downloaded within one cycle

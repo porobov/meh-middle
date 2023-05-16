@@ -43,8 +43,8 @@ function constructRetryParams(error, numOfTries) {
 
 
 async function mainLoop() {
-    let contractName = "MillionEther"
-    let contractAddress = "0x15dbdB25f870f21eaf9105e68e249E0426DaE916"
+    let contractName = config.contractName
+    let contractAddress = config.contractAddress
     let contract = new MillionEther(contractName, contractAddress)
 
 
@@ -318,7 +318,7 @@ from block ${ buySellFromBlock } to ${ buySellEvents.blockNumber }`)
         && siteData.newImageLatestCheckedBlock > 0
         && siteData.buySellLatestCheckedBlock > 0
     ) {
-        const keyName = siteData.middleWareID + siteData.chainID
+        const keyName = siteData.middleWareID + siteData.chainID + config.dbName
         const isServing = await wg.publish(
                 JSON.stringify(siteData, null, 2),
                 keyName)
