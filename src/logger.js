@@ -1,6 +1,7 @@
 const winston = require('winston')
 const { combine, timestamp, json, errors } = winston.format
 const TelegramLogger = require('winston-telegram')
+const DailyRotateFile = require('winston-daily-rotate-file')
 
 // https://betterstack.com/community/guides/logging/how-to-install-setup-and-use-winston-and-morgan-to-log-node-js-applications/
 const errorFilter = winston.format((info, opts) => {
@@ -21,18 +22,27 @@ const logger = winston.createLogger({
     format: combine(errors({ stack: true }), timestamp(), json()),
     transports: [
       consoleTransport,
-      new winston.transports.File({
-        filename: 'logs/combined.log',
+      new DailyRotateFile({
+        filename: 'logs/combined-%DATE%.log',
+        datePattern: 'YYYY-MM-DD-HH',
+        maxSize: '20m',
+        maxFiles: '14d',
       }),
-      new winston.transports.File({
-        filename: 'logs/app-error.log',
+      new DailyRotateFile({
+        filename: 'logs/app-error-%DATE%.log',
         level: 'error',
         format: combine(errorFilter(), timestamp(), json()),
+        datePattern: 'YYYY-MM-DD-HH',
+        maxSize: '20m',
+        maxFiles: '14d',
       }),
-      new winston.transports.File({
-        filename: 'logs/app-info.log',
+      new DailyRotateFile({
+        filename: 'logs/app-info-%DATE%.log',
         level: 'info',
         format: combine(infoFilter(), timestamp(), json()),
+        datePattern: 'YYYY-MM-DD-HH',
+        maxSize: '20m',
+        maxFiles: '14d',
       }),
       new TelegramLogger({
         level: 'error',
