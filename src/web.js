@@ -54,8 +54,9 @@ class WebGateway {
   }
 
   async uploadAdsSnapshotPic(bigPicBinary){
-    const filename = "./logs/hey.png"
-    this._saveImageBufferToDisk(bigPicBinary, filename)
+    // we don't need to upload image the whole snapshot is uploaded to Cloudflare KV
+    const filename = "./logs/hey.png (not uploading image anymore)"
+    // this._saveImageBufferToDisk(bigPicBinary, filename)
     return filename
   }
 
