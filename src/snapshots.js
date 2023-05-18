@@ -114,7 +114,7 @@ class BuySellSnapshot {
         return _addToJsonMap(
             ownershipMapJSON,
             buySellTx,
-            { price: ownershipMapJSON.price }
+            { price: buySellTx.price }
         )
     }
 
