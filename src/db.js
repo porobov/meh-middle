@@ -35,6 +35,10 @@ class DB {
       this.buySellSnapshots = this.db.collection("buySellSnapshots")
       // record id for current state
       this.tempStateId = this.conf.stateRecordName
+      this.eventNameToCollection = {
+        [this.conf.newImageEventName]: this.ads,
+        [this.conf.buySellEventName]: this.buySells
+      }
       return true
     } else {
       return false
@@ -51,6 +55,11 @@ class DB {
   recordNameForEvent(eventName) {
     return "latestBlockFor" + eventName
   }
+
+  getCollectionForEvent(eventName) {
+    return this.eventNameToCollection[eventName]
+  }
+  
 
   // checking if collection is empty
   async isEmptyCollection(collection) {
@@ -165,16 +174,9 @@ class DB {
 
   // SAVING EVENTS
 
-  async addAdsEvents(decodedEvents) {
-    return await this._addEvents(decodedEvents, this.ads)
-  }
-
-  async addBuySellEvents(decodedEvents) {
-    return await this._addEvents(decodedEvents, this.buySells)
-  }
-
   // will put events into db
-  async _addEvents(decodedEvents, collection) {
+  async addEvents(decodedEvents, eventName) {
+    const collection = this.getCollectionForEvent(eventName)
     const [res, err] = await withErrorHandling(
       async () => await collection.insertMany(decodedEvents, { ordered: false }),
       "_addEvents")
@@ -336,9 +338,9 @@ class DB {
   async getLatestBuySellSnapshot() {
     return this._getSnapshotBeforeID(this.buySellSnapshots, 'infinity')
   }
-
+ 
   async getTransactionsFromID(latestTransactionID) {
-    return this._getEventsFromID(this.ads, latestTransactionID)
+    return this._getEventsFromID(this.buySells, latestTransactionID)
   }
 
   async saveBuySellSnapshot(newSnapshot) {

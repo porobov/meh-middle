@@ -46,95 +46,78 @@ async function mainLoop() {
     let contractName = config.contractName
     let contractAddress = config.contractAddress
     let contract = new MillionEther(contractName, contractAddress)
+    let oldMehContract = new MillionEther(contractName, contractAddress)
 
 
     // DOWNLOAD EVENTS
+    async function syncEvents(eventName, contract, mapper) {
 
-    // NEWIMAGES
+        let fromBlock = await db.getLatestBlockForEvent(eventName)
+        if ( fromBlock == null ) { return }
+        
+        // get events
+        let newEvents = await contract.getEvents(eventName, fromBlock)
+        if ( newEvents == null ) { return }
 
-    let fromBlock = await db.getLatestBlockForEvent(NEW_IMAGE_EVENT_NAME)
-    if ( fromBlock == null ) { return }
-    
-    // get events
-    let newEvents = await contract.getEvents(NEW_IMAGE_EVENT_NAME, fromBlock)
-    if ( newEvents == null ) { return }
+        const formatedEvents = newEvents.decodedEvents.map(mapper)
 
-    const formatedEvents = newEvents.decodedEvents.map(ev => {
-      return {
-        ID: ev.args.ID.toNumber(),
-        // fixing smart contract bug. Coordinates may be mixed up
-        fromX: ev.args.fromX < ev.args.toX ? ev.args.fromX : ev.args.toX,
-        fromY: ev.args.fromY < ev.args.toY ? ev.args.fromY : ev.args.toY,
-        toX: ev.args.toX > ev.args.fromX ? ev.args.toX : ev.args.fromX,
-        toY: ev.args.toY > ev.args.fromY ? ev.args.toY : ev.args.fromY,
-        adText: ev.args.adText,
-        adUrl: ev.args.adUrl,
-        imageSourceUrl: ev.args.imageSourceUrl,
-        numOfTries: 0,  // num of download tries for ad image
-        failedToDownLoad: false,  // flag. If image failed to download
-        nextTryTimestamp: 0,  // next download attempt timestamp
-        downloadTimestamp: 0,  // image download status change timestamp to be precise
-      }
-    })
+        logger.debug(
+    `Received ${formatedEvents.length} \
+    new ${ eventName } events \
+    from block ${ fromBlock } to ${newEvents.blockNumber}`)
 
-    logger.debug(
-`Received ${formatedEvents.length} \
-new ${ NEW_IMAGE_EVENT_NAME } events \
-from block ${ fromBlock } to ${newEvents.blockNumber}`)
-
-    // save new events and block number to db
-    let insertsCount = 0
-    if (formatedEvents.length > 0 && newEvents.blockNumber > 0 ) {
-        insertsCount = await db.addAdsEvents(formatedEvents)
-        logger.info(`${ insertsCount } new ${ NEW_IMAGE_EVENT_NAME } events were written to db`)
-    }
-
-    if (formatedEvents.length == insertsCount && newEvents.blockNumber > 0 ) {
-        let saved = await db.saveLatestBlockForEvent(NEW_IMAGE_EVENT_NAME, newEvents.blockNumber)
-        logger.debug(`${ saved ? "Saved" : "FAILED TO SAVE" } block ${newEvents.blockNumber} for ${NEW_IMAGE_EVENT_NAME} event to db`)
-    } else {
-        logger.error(`Retrieved from chain and saved ${NEW_IMAGE_EVENT_NAME} events mismatch`)
-    }
-
-    // NEWSTATUS
-
-    // get latest block for events
-    let buySellFromBlock = await db.getLatestBlockForEvent(BUY_SELL_EVENT_NAME)
-    if ( buySellFromBlock == null ) { return }
-    
-    // get events
-    let buySellEvents = await contract.getEvents(BUY_SELL_EVENT_NAME, buySellFromBlock)
-
-    const formatedBuySellEvents = buySellEvents.decodedEvents.map(ev => {
-        return {
-          ID: ev.args.ID.toNumber(),
-          // fixing smart contract bug. Coordinates may be mixed up
-          fromX: ev.args.fromX < ev.args.toX ? ev.args.fromX : ev.args.toX,
-          fromY: ev.args.fromY < ev.args.toY ? ev.args.fromY : ev.args.toY,
-          toX: ev.args.toX > ev.args.fromX ? ev.args.toX : ev.args.fromX,
-          toY: ev.args.toY > ev.args.fromY ? ev.args.toY : ev.args.fromY,
-          price: ev.args.price.toString() // toString here, because values can be too bog for DB
+        // save new events and block number to db
+        let insertsCount = 0
+        if (formatedEvents.length > 0 && newEvents.blockNumber > 0 ) {
+            // TODO adding events must be parametric
+            insertsCount = await db.addEvents(formatedEvents, eventName)
+            logger.info(`${ insertsCount } new ${ eventName } events were written to db`)
         }
-      })
 
-      logger.debug(
-`Received ${ formatedBuySellEvents.length } \
-new ${ BUY_SELL_EVENT_NAME } events \
-from block ${ buySellFromBlock } to ${ buySellEvents.blockNumber }`)
-
-    // save new events and block number to db
-    let bsInsertsCount = 0
-    if ( formatedBuySellEvents.length > 0 && buySellEvents.blockNumber > 0 ) {
-        bsInsertsCount = await db.addBuySellEvents(formatedBuySellEvents)
-        logger.info(`${ bsInsertsCount } new ${ BUY_SELL_EVENT_NAME } events were written to db`)
+        if (formatedEvents.length == insertsCount && newEvents.blockNumber > 0 ) {
+            let saved = await db.saveLatestBlockForEvent(eventName, newEvents.blockNumber)
+            logger.debug(`${ saved ? "Saved" : "FAILED TO SAVE" } block ${newEvents.blockNumber} for ${eventName} event to db`)
+        } else {
+            logger.error(`Retrieved from chain and saved ${eventName} events mismatch`)
+        }
     }
 
-    if (formatedBuySellEvents.length == bsInsertsCount && buySellEvents.blockNumber > 0 ) {
-        let saved = await db.saveLatestBlockForEvent(BUY_SELL_EVENT_NAME, buySellEvents.blockNumber)
-        logger.debug(`${ saved ? "Saved" : "FAILED TO SAVE" } block ${buySellEvents.blockNumber} for ${ BUY_SELL_EVENT_NAME } event to db`)
-    } else {
-        logger.error(`Retrieved from chain and saved ${ BUY_SELL_EVENT_NAME } events mismatch`)
+    // NEWIMAGES (oldMeh)
+    const newImageMapper = ev => {
+        return {
+            ID: ev.args.ID.toNumber(),
+            // fixing smart contract bug. Coordinates may be mixed up
+            fromX: ev.args.fromX < ev.args.toX ? ev.args.fromX : ev.args.toX,
+            fromY: ev.args.fromY < ev.args.toY ? ev.args.fromY : ev.args.toY,
+            toX: ev.args.toX > ev.args.fromX ? ev.args.toX : ev.args.fromX,
+            toY: ev.args.toY > ev.args.fromY ? ev.args.toY : ev.args.fromY,
+            adText: ev.args.adText,
+            adUrl: ev.args.adUrl,
+            imageSourceUrl: ev.args.imageSourceUrl,
+            transactionHash: ev.transactionHash,
+            calculatedID: ev.blockNumber * 100000 + ev.logIndex,
+            numOfTries: 0,  // num of download tries for ad image
+            failedToDownLoad: false,  // flag. If image failed to download
+            nextTryTimestamp: 0,  // next download attempt timestamp
+            downloadTimestamp: 0,  // image download status change timestamp to be precise
+        }
     }
+    await syncEvents(NEW_IMAGE_EVENT_NAME, oldMehContract, newImageMapper)
+
+    // NEWSTATUS (oldMeh)
+    const newStatusMapper = ev => {
+        return {
+            ID: ev.args.ID.toNumber(),
+            // fixing smart contract bug. Coordinates may be mixed up
+            fromX: ev.args.fromX < ev.args.toX ? ev.args.fromX : ev.args.toX,
+            fromY: ev.args.fromY < ev.args.toY ? ev.args.fromY : ev.args.toY,
+            toX: ev.args.toX > ev.args.fromX ? ev.args.toX : ev.args.fromX,
+            toY: ev.args.toY > ev.args.fromY ? ev.args.toY : ev.args.fromY,
+            price: ev.args.price.toString(), // toString here, because values can be too bog for DB
+            transactionHash: ev.transactionHash,
+        }
+    }
+    await syncEvents(BUY_SELL_EVENT_NAME, oldMehContract, newStatusMapper)
 
 
     // PREPARE DATA FOR ADS SNAPSHOT
