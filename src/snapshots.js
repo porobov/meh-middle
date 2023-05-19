@@ -7,8 +7,8 @@ function _blockID(x, y) {
 
 function _addToJsonMap(bgJson, coords, entry) {
     let parsedMap = JSON.parse(bgJson)
-    for (let x = coords.fromX; x == coords.toX; x++) {
-        for (let y = coords.fromY; y == coords.toY; y++) {
+    for (let x = coords.fromX; x <= coords.toX; x++) {
+        for (let y = coords.fromY; y <= coords.toY; y++) {
             let blockID = _blockID(x, y)
             parsedMap[blockID] = { x: x, y: y , ...entry}
         }
@@ -30,6 +30,7 @@ class AdsSnapshot {
         this.overlays = []
     }
 
+    // TODO add transaction hash
     _addToLinksMapJSON(linksMapJSON, newAd) {
         return _addToJsonMap(
             linksMapJSON,
