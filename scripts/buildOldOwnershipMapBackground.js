@@ -17,14 +17,15 @@ async function mainLoop() {
     let contractName = config.contractName
     let contractAddress = config.contractAddress
     let meh2016 = new MillionEther(contractName, contractAddress)
-    let meh2018 =new MillionEther(contractName, contractAddress, new ethers.Contract(newMehAddress, newMehAbi, signer))
+    let meh2018 = new MillionEther(contractName, contractAddress, new ethers.Contract(newMehAddress, newMehAbi, signer))
     
     
     async function syncEvents(eventName, contract, mapper) {
 
+        // fixing smart contract bug. Coordinates may be mixed up
         const mixedCoordinates = ev => {
             if (ev.args.fromX) {
-                return (ev.args.fromX < ev.args.toX && ev.args.fromY < ev.args.toY)
+                return (ev.args.fromX <= ev.args.toX && ev.args.fromY <= ev.args.toY)
             } else {
                 return true
             }
@@ -50,44 +51,54 @@ from block ${fromBlock} to ${newEvents.blockNumber}`)
     }
 
     // 2016
-    const buySellsMapper2016 = ev => {
-        return {
-            ID: ev.blockNumber * 100000 + ev.logIndex,
-            // fixing smart contract bug. Coordinates may be mixed up
-            // TODO must igonre mixed up coordinates
-            fromX: ev.args.fromX < ev.args.toX ? ev.args.fromX : undefined,
-            fromY: ev.args.fromY < ev.args.toY ? ev.args.fromY : undefined,
-            toX: ev.args.toX > ev.args.fromX ? ev.args.toX : undefined,
-            toY: ev.args.toY > ev.args.fromY ? ev.args.toY : undefined,
-            price: ev.args.price.toString(), // toString here, because values can be too bog for DB
-            transactionHash: ev.transactionHash,
-            contract: "2016"
-        }
-    }
     const buySells2016 = await syncEvents(
         BUY_SELL_EVENT_NAME, 
         meh2016, 
-        buySellsMapper2016)
+        ev => {
+            return {
+                ID: ev.blockNumber * 100000 + ev.logIndex,
+                fromX: ev.args.fromX,
+                fromY: ev.args.fromY,
+                toX: ev.args.toX,
+                toY: ev.args.toY,
+                price: ev.args.price.toString(), // toString here, because values can be too bog for DB
+                transactionHash: ev.transactionHash,
+                contract: "2016"
+            }
+        })
 
+    // 2018
     // event LogBuys( uint ID, uint8 fromX, uint8 fromY, uint8 toX, uint8 toY, address newLandlord);
-    const transferMapper2018 = ev => {
-        return {
-            ID: ev.blockNumber * 100000 + ev.logIndex,
-            from: ev.args._from,
-            to: ev.args._to,
-            tokenId: ev.args._tokenId.toNumber(),
-            transactionHash: ev.transactionHash,
-            contract: "2018"
-        }
-    }
+    const logBuys2018 = await syncEvents(
+        "LogBuys", 
+        meh2018, 
+        ev => {
+            return {
+                ID: ev.blockNumber * 100000 + ev.logIndex,
+                fromX: ev.args.fromX,
+                fromY: ev.args.fromY,
+                toX: ev.args.toX,
+                toY: ev.args.toY,
+                address: ev.args.address,
+                transactionHash: ev.transactionHash,
+                contract: "2016"
+            }
+        })
 
     // event transfer for wrapper from, to, tokenId
-
-
     const transfers2018 = await syncEvents(
         "Transfer", 
         meh2018, 
-        transferMapper2018)
+        ev => {
+            return {
+                ID: ev.blockNumber * 100000 + ev.logIndex,
+                from: ev.args._from,
+                to: ev.args._to,
+                tokenId: ev.args._tokenId.toNumber(),
+                transactionHash: ev.transactionHash,
+                contract: "2018"
+            }
+        })
     
     // BUILDING NEW BACKGROUND SNAPSHOT
     // this is previous background snapshot. 
@@ -103,7 +114,7 @@ from block ${fromBlock} to ${newEvents.blockNumber}`)
         buySellSnapshot.overlay(ev)
     }
     let snapshot2016length = Object.keys(JSON.parse(buySellSnapshot.getOwnershipMapJSON())).length 
-    for (const ev of transfers2018) {
+    for (const ev of logBuys2018) {
         buySellSnapshot.overlay(ev)
     }
     let snapshotTotalLength = Object.keys(JSON.parse(buySellSnapshot.getOwnershipMapJSON())).length 
