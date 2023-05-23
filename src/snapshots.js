@@ -5,14 +5,32 @@ function _blockID(x, y) {
     return (y - 1) * 100 + x;
   }
 
+function _blockXY(blockId) {
+    let remainder = blockId % 100;
+    let y;
+    if (remainder === 0) {
+        y = Math.floor(blockId / 100)
+    } else {
+        y = Math.floor(blockId / 100 + 1)
+    }
+    let x = blockId - (y - 1) * 100
+    return [x, y]
+}
+
 function _addToJsonMap(bgJson, coords, entry) {
     let parsedMap = JSON.parse(bgJson)
-    for (let x = coords.fromX; x <= coords.toX; x++) {
-        for (let y = coords.fromY; y <= coords.toY; y++) {
-            let blockID = _blockID(x, y)
-            parsedMap[blockID] = { x: x, y: y , ...entry}
+    if ( coords.fromX ) {
+        for (let x = coords.fromX; x <= coords.toX; x++) {
+            for (let y = coords.fromY; y <= coords.toY; y++) {
+                let blockID = _blockID(x, y)
+                parsedMap[blockID] = { ...parsedMap[blockID], ...{x: x}, ...{y: y} , ...entry}
+            }
         }
+    } else {
+        const xy = _blockXY(coords.tokenId)
+        parsedMap[coords.tokenId] = {...parsedMap[coords.tokenId], ...{x: xy[0]}, ...{y: xy[1]} , ...entry}
     }
+    
     return JSON.stringify(parsedMap, null, 2)
 }
 
@@ -110,12 +128,18 @@ class BuySellSnapshot {
         this.ownershipMapJSON = previousSnapshot.ownershipMapJSON
     }
 
-
+    // this fuction accepts Transfer(2018 and wrapper), LogBuys(2018) and NewAreaStatus (2016) events
     _addToOwnershipMapJSON(ownershipMapJSON, buySellTx) {
         return _addToJsonMap(
             ownershipMapJSON,
             buySellTx,
-            { price: buySellTx.price }
+            { 
+                ...(buySellTx.price !== undefined ? { price: buySellTx.price } : {}),
+                transactionHash: buySellTx.transactionHash,
+                from: buySellTx.from,
+                to: buySellTx.to ? buySellTx.to : buySellTx.address, // address is from LogBuys event
+                contract: buySellTx.contract
+            }
         )
     }
 
