@@ -40,7 +40,33 @@ function constructRetryParams(error, numOfTries) {
     return response
 }
 
+    async function getFormatedEvents(fromBlock, eventName, contract, mapper) {
+        const newEvents = await contract.getEvents(eventName, fromBlock)
+        if ( newEvents == null ) { return null }
+        const formatedEvents = newEvents.decodedEvents.map(mapper)
+        logger.debug(
+`Received ${formatedEvents.length} \
+new ${ eventName } events \
+from block ${ fromBlock } to ${newEvents.blockNumber}`)
+        return [formatedEvents, newEvents.blockNumber]
+    }
 
+    // save new events and block number to db
+    async function saveEventsToDB(toBlock, eventName, formatedEvents, db) {
+        let insertsCount = 0
+        if (formatedEvents.length > 0 && toBlock > 0 ) {
+            // TODO adding events must be parametric
+            insertsCount = await db.addEvents(formatedEvents, eventName)
+            logger.info(`${ insertsCount } new ${ eventName } events were written to db`)
+        }
+
+        if (formatedEvents.length == insertsCount && toBlock > 0 ) {
+            let saved = await db.saveLatestBlockForEvent(eventName, toBlock)
+            logger.debug(`${ saved ? "Saved" : "FAILED TO SAVE" } block ${toBlock} for ${eventName} event to db`)
+        } else {
+            logger.error(`Retrieved from chain and saved ${eventName} events mismatch`)
+        }
+    }
 
 async function mainLoop() {
     let contractName = config.contractName
@@ -49,37 +75,13 @@ async function mainLoop() {
     let oldMehContract = new MillionEther(contractName, contractAddress)
 
 
-    // DOWNLOAD EVENTS
+    // SYNC EVENTS
     async function syncEvents(eventName, contract, mapper) {
-
         let fromBlock = await db.getLatestBlockForEvent(eventName)
-        if ( fromBlock == null ) { return }
-        
-        // get events
-        let newEvents = await contract.getEvents(eventName, fromBlock)
-        if ( newEvents == null ) { return }
-
-        const formatedEvents = newEvents.decodedEvents.map(mapper)
-
-        logger.debug(
-    `Received ${formatedEvents.length} \
-    new ${ eventName } events \
-    from block ${ fromBlock } to ${newEvents.blockNumber}`)
-
-        // save new events and block number to db
-        let insertsCount = 0
-        if (formatedEvents.length > 0 && newEvents.blockNumber > 0 ) {
-            // TODO adding events must be parametric
-            insertsCount = await db.addEvents(formatedEvents, eventName)
-            logger.info(`${ insertsCount } new ${ eventName } events were written to db`)
-        }
-
-        if (formatedEvents.length == insertsCount && newEvents.blockNumber > 0 ) {
-            let saved = await db.saveLatestBlockForEvent(eventName, newEvents.blockNumber)
-            logger.debug(`${ saved ? "Saved" : "FAILED TO SAVE" } block ${newEvents.blockNumber} for ${eventName} event to db`)
-        } else {
-            logger.error(`Retrieved from chain and saved ${eventName} events mismatch`)
-        }
+        if ( fromBlock == null ) { return null }
+        const [formatedEvents, toBlock] = await getFormatedEvents(fromBlock, eventName, contract, mapper) 
+        if ( formatedEvents == null ) { return null }
+        await saveEventsToDB(toBlock, eventName, formatedEvents, db)
     }
 
     // NEWIMAGES (oldMeh)
@@ -87,6 +89,8 @@ async function mainLoop() {
         return {
             ID: ev.args.ID.toNumber(),
             // fixing smart contract bug. Coordinates may be mixed up
+            // TODO must igonre mixed up coordinates
+            // TODO fix the case when coordinates are equal
             fromX: ev.args.fromX < ev.args.toX ? ev.args.fromX : ev.args.toX,
             fromY: ev.args.fromY < ev.args.toY ? ev.args.fromY : ev.args.toY,
             toX: ev.args.toX > ev.args.fromX ? ev.args.toX : ev.args.fromX,
@@ -109,6 +113,7 @@ async function mainLoop() {
         return {
             ID: ev.args.ID.toNumber(),
             // fixing smart contract bug. Coordinates may be mixed up
+            // TODO must igonre mixed up coordinates
             fromX: ev.args.fromX < ev.args.toX ? ev.args.fromX : ev.args.toX,
             fromY: ev.args.fromY < ev.args.toY ? ev.args.fromY : ev.args.toY,
             toX: ev.args.toX > ev.args.fromX ? ev.args.toX : ev.args.fromX,
@@ -364,3 +369,8 @@ main()
     console.error(error);
     process.exit(1);
   });
+
+  module.exports = {
+    getFormatedEvents,
+    saveEventsToDB
+  }
