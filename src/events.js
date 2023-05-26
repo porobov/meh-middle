@@ -17,81 +17,92 @@ const sellEventFilter = ev => {
     }
 }
 
-const newAreaStatus2016mapper = ev => {
+const commonFields = (ev) => {
     return {
         ID: ev.blockNumber * 100000 + ev.logIndex,
+        transactionHash: ev.transactionHash
+    }
+}
+
+const coordsFields = (ev) => {
+    return {
         fromX: ev.args.fromX,
         fromY: ev.args.fromY,
         toX: ev.args.toX,
         toY: ev.args.toY,
+    }
+}
+
+// Ownership
+
+const newAreaStatus2016mapper = ev => {
+    return {
+        ...commonFields(ev),
+        ...coordsFields(ev),
         price: ev.args.price.toString(), // toString here, because values can be too bog for DB
-        transactionHash: ev.transactionHash,
         contract: "2016"
     }
 }
 
-// 2018
-// event LogBuys( uint ID, uint8 fromX, uint8 fromY, uint8 toX, uint8 toY, address newLandlord);
 const logBuys2018mapper = ev => {
     return {
-        ID: ev.blockNumber * 100000 + ev.logIndex,
-        fromX: ev.args.fromX,
-        fromY: ev.args.fromY,
-        toX: ev.args.toX,
-        toY: ev.args.toY,
+        ...commonFields(ev),
+        ...coordsFields(ev),
         address: ev.args.address,
-        transactionHash: ev.transactionHash,
         contract: "2018"
     }
 }
 
-// event transfer for wrapper from, to, tokenId
 const transfer2018mapper = ev => {
     return {
-        ID: ev.blockNumber * 100000 + ev.logIndex,
+        ...commonFields(ev),
         from: ev.args._from,
         to: ev.args._to,
         tokenId: ev.args._tokenId.toNumber(),
-        transactionHash: ev.transactionHash,
         contract: "2018"
     }
 }
 
-const newImage2016mapper = ev => {
+// ADS
+
+// ads common
+
+const adParamsFields = (ev) => {
     return {
-        ID: ev.blockNumber * 100000 + ev.logIndex,
-        fromX: ev.args.fromX,
-        fromY: ev.args.fromY,
-        toX: ev.args.toX,
-        toY: ev.args.toY,
         adText: ev.args.adText,
         adUrl: ev.args.adUrl,
         imageSourceUrl: ev.args.imageSourceUrl,
-        transactionHash: ev.transactionHash,
+    }
+}
+
+const adDownloadFields = () => {
+    return {
         numOfTries: 0,  // num of download tries for ad image
         failedToDownLoad: false,  // flag. If image failed to download
         nextTryTimestamp: 0,  // next download attempt timestamp
         downloadTimestamp: 0,  // image download status change timestamp to be precise
+    }
+}
+
+// ads events mappers
+
+const newImage2016mapper = ev => {
+    return {
+        ...commonFields(ev),
+        ...coordsFields(ev),
+        ...adParamsFields(ev), 
+        ...adDownloadFields(),
         contract: "2016"
     }
 }
 
 const logAds2018mapper = ev => {
     return {
-        ID: ev.blockNumber * 100000 + ev.logIndex,
-        fromX: ev.args.fromX,
-        fromY: ev.args.fromY,
-        toX: ev.args.toX,
-        toY: ev.args.toY,
-        adText: ev.args.adText,
-        adUrl: ev.args.adUrl,
-        imageSourceUrl: ev.args.imageSourceUrl,
+        ...commonFields(ev),
+        ...coordsFields(ev),
+        ...adParamsFields(ev), 
+        ...adDownloadFields(),
         advertiser: ev.args.advertiser,
-        transactionHash: ev.transactionHash,
-        numOfTries: 0,  // num of download tries for ad image
-        failedToDownLoad: false,  // flag. If image failed to download
-        nextTryTimestamp: 0,  // next download attempt timestamp
-        downloadTimestamp: 0,  // image download status change timestamp to be precise
         contract: "2018"
     }
 }
