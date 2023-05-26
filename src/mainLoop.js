@@ -1,11 +1,18 @@
 const { MillionEther } = require("./chain.js")
-const { DB } = require("./db.js")
 const hre = require("hardhat");
 const { WebGateway } = require("./web.js")
 const { ImageEditor } = require("./imageEditor.js")
 const { AdsSnapshot, BuySellSnapshot } = require("./snapshots.js")
 const { logger } = require("./logger.js")
-
+const { 
+    mixedCoordinatesFilter,
+    sellEventFilter,
+    newAreaStatus2016mapper,
+    logBuys2018mapper,
+    transfer2018mapper,
+    newImage2016mapper,
+    logAds2018mapper 
+} = require("./events.js")
 // config
 const config = hre.config.dbConf
 const MAX_NUM_OF_DOWNLOAD_ATTEMPTS = config.maxNumOfDownloadAttempts
@@ -41,7 +48,7 @@ function constructRetryParams(error, numOfTries) {
     async function getFormatedEvents(fromBlock, eventName, contract, mapper) {
         const newEvents = await contract.getEvents(eventName, fromBlock)
         if ( newEvents == null ) { return null }
-        const formatedEvents = newEvents.decodedEvents.map(mapper)
+        const formatedEvents = newEvents.decodedEvents.filter(mixedCoordinatesFilter).filter(sellEventFilter).map(mapper)
         logger.debug(
 `Received ${formatedEvents.length} \
 new ${ eventName } events \
@@ -81,46 +88,10 @@ async function mainLoop(db) {
         if ( formatedEvents == null ) { return null }
         await saveEventsToDB(toBlock, eventName, formatedEvents, db)
     }
-
     // NEWIMAGES (oldMeh)
-    const newImageMapper = ev => {
-        return {
-            ID: ev.args.ID.toNumber(),
-            // fixing smart contract bug. Coordinates may be mixed up
-            // TODO must igonre mixed up coordinates
-            // TODO fix the case when coordinates are equal
-            fromX: ev.args.fromX < ev.args.toX ? ev.args.fromX : ev.args.toX,
-            fromY: ev.args.fromY < ev.args.toY ? ev.args.fromY : ev.args.toY,
-            toX: ev.args.toX > ev.args.fromX ? ev.args.toX : ev.args.fromX,
-            toY: ev.args.toY > ev.args.fromY ? ev.args.toY : ev.args.fromY,
-            adText: ev.args.adText,
-            adUrl: ev.args.adUrl,
-            imageSourceUrl: ev.args.imageSourceUrl,
-            transactionHash: ev.transactionHash,
-            calculatedID: ev.blockNumber * 100000 + ev.logIndex,
-            numOfTries: 0,  // num of download tries for ad image
-            failedToDownLoad: false,  // flag. If image failed to download
-            nextTryTimestamp: 0,  // next download attempt timestamp
-            downloadTimestamp: 0,  // image download status change timestamp to be precise
-        }
-    }
-    await syncEvents(NEW_IMAGE_EVENT_NAME, oldMehContract, newImageMapper)
-
+    await syncEvents(NEW_IMAGE_EVENT_NAME, oldMehContract, newImage2016mapper)
     // NEWSTATUS (oldMeh)
-    const newStatusMapper = ev => {
-        return {
-            ID: ev.args.ID.toNumber(),
-            // fixing smart contract bug. Coordinates may be mixed up
-            // TODO must igonre mixed up coordinates
-            fromX: ev.args.fromX < ev.args.toX ? ev.args.fromX : ev.args.toX,
-            fromY: ev.args.fromY < ev.args.toY ? ev.args.fromY : ev.args.toY,
-            toX: ev.args.toX > ev.args.fromX ? ev.args.toX : ev.args.fromX,
-            toY: ev.args.toY > ev.args.fromY ? ev.args.toY : ev.args.fromY,
-            price: ev.args.price.toString(), // toString here, because values can be too bog for DB
-            transactionHash: ev.transactionHash,
-        }
-    }
-    await syncEvents(BUY_SELL_EVENT_NAME, oldMehContract, newStatusMapper)
+    await syncEvents(BUY_SELL_EVENT_NAME, oldMehContract, newAreaStatus2016mapper)
 
 
     // PREPARE DATA FOR ADS SNAPSHOT
