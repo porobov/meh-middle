@@ -36,8 +36,12 @@ class DB {
       // record id for current state
       this.tempStateId = this.conf.stateRecordName
       this.eventNameToCollection = {
-        [this.conf.newImageEventName]: this.ads,
-        [this.conf.buySellEventName]: this.buySells
+        "LogAds": this.ads,  // 2018 contract
+        [this.conf.newImageEventName]: this.ads,  // 2016
+        [this.conf.buySellEventName]: this.buySells, // 2016
+        "LogBuys": this.buySells, // 2018
+        "Transfer": this.buySells, // 2018
+        // TODO add wrapper here
       }
       return true
     } else {

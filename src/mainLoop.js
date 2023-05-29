@@ -45,8 +45,8 @@ function constructRetryParams(error, numOfTries) {
     return response
 }
 
-    async function getFormatedEvents(fromBlock, eventName, contract, mapper) {
-        const newEvents = await contract.getEvents(eventName, fromBlock)
+    async function getFormatedEvents(eventName, contract, mapper, fromBlock, toBlock) {
+        const newEvents = await contract.getEvents(eventName, fromBlock, toBlock)
         if ( newEvents == null ) { return null }
         const formatedEvents = newEvents.decodedEvents.filter(mixedCoordinatesFilter).filter(sellEventFilter).map(mapper)
         logger.debug(
@@ -84,7 +84,7 @@ async function mainLoop(db) {
     async function syncEvents(eventName, contract, mapper) {
         let fromBlock = await db.getLatestBlockForEvent(eventName)
         if ( fromBlock == null ) { return null }
-        const [formatedEvents, toBlock] = await getFormatedEvents(fromBlock, eventName, contract, mapper) 
+        const [formatedEvents, toBlock] = await getFormatedEvents(eventName, contract, mapper, fromBlock)
         if ( formatedEvents == null ) { return null }
         await saveEventsToDB(toBlock, eventName, formatedEvents, db)
     }

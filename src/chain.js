@@ -9,7 +9,7 @@ class MillionEther {
     this.contractInstance = contractInstance
   }
 
-  async getEvents(eventName, fromBlock) {
+  async getEvents(eventName, fromBlock, toBlock = "latest") {
     try {
       let contract
       if (this.contractInstance) {
@@ -17,7 +17,7 @@ class MillionEther {
       } else {
         contract = await ethers.getContractAt(this.contractName, this.contractAddress)
       }
-      const latestBlock = (await ethers.provider.getBlock("latest")).number
+      const latestBlock = (await ethers.provider.getBlock(toBlock)).number
       const eventFilter = contract.filters[eventName]()
       const events = await contract.queryFilter(eventFilter, fromBlock, latestBlock)
       return {
