@@ -40,6 +40,7 @@ const newAreaStatus2016mapper = ev => {
         ...commonFields(ev),
         ...coordsFields(ev),
         price: ev.args.price.toString(), // toString here, because values can be too bog for DB
+        event: "NewAreaStatus",
         contract: "2016"
     }
 }
@@ -49,6 +50,7 @@ const logBuys2018mapper = ev => {
         ...commonFields(ev),
         ...coordsFields(ev),
         address: ev.args.address,
+        event: "LogBuys",
         contract: "2018"
     }
 }
@@ -59,6 +61,7 @@ const transfer2018mapper = ev => {
         from: ev.args._from,
         to: ev.args._to,
         tokenId: ev.args._tokenId.toNumber(),
+        event: "Transfer",
         contract: "2018"
     }
 }
@@ -92,6 +95,7 @@ const newImage2016mapper = ev => {
         ...coordsFields(ev),
         ...adParamsFields(ev), 
         ...adDownloadFields(),
+        event: "NewImage",
         contract: "2016"
     }
 }
@@ -103,6 +107,7 @@ const logAds2018mapper = ev => {
         ...adParamsFields(ev), 
         ...adDownloadFields(),
         advertiser: ev.args.advertiser,
+        event: "LogAds",
         contract: "2018"
     }
 }
