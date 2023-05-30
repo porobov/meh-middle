@@ -84,7 +84,8 @@ async function mainLoop(db) {
     async function syncEvents(eventName, contract, mapper) {
         let fromBlock = await db.getLatestBlockForEvent(eventName)
         if ( fromBlock == null ) { return null }
-        const [formatedEvents, toBlock] = await getFormatedEvents(eventName, contract, mapper, fromBlock)
+        // using fromBlock + 1 to make sure no overlap happens
+        const [formatedEvents, toBlock] = await getFormatedEvents(eventName, contract, mapper, fromBlock + 1)
         if ( formatedEvents == null ) { return null }
         await saveEventsToDB(toBlock, eventName, formatedEvents, db)
     }
