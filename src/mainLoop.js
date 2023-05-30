@@ -198,7 +198,7 @@ async function mainLoop(db) {
         const newSnapshot =  {
             latestEventId: adsSnapshot.getLatestAdID(),
             latestDownloadTimestamp: adsSnapshot.getLatestAdDownloadTimestamp(),
-            linksMapJSON: adsSnapshot.getLinksMapJSON(),
+            picMapJSON: adsSnapshot.getLinksMapJSON(),
             bigPicBinary: bigPicBinary,  // is used as background
             adsBigPicUrl: bigPicBinary ? await wg.uploadAdsSnapshotPic(bigPicBinary) : null
         }
@@ -207,7 +207,7 @@ async function mainLoop(db) {
         if (
             // not checking for latestDownloadTimestamp is it ok?
             newSnapshot.latestEventId > 0
-            && newSnapshot.linksMapJSON != '[]'
+            && newSnapshot.picMapJSON != '{}'
             && newSnapshot.bigPicBinary != null
             && newSnapshot.adsBigPicUrl != null
         ) {
@@ -231,7 +231,7 @@ async function mainLoop(db) {
     const transactionsToBeAdded = 
         await db.getTransactionsFromID(buySellSnapshot.getLatestTransactionID())
     for await (const buySellTx of transactionsToBeAdded) {
-        buySellSnapshot.overlay(buySellTx)
+        await buySellSnapshot.overlay(buySellTx)
     }
     // save new snapshot to db (saving only fully processed snapshots)
     if ( buySellSnapshot.gotOverlays() ) {

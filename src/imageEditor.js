@@ -19,8 +19,16 @@ class ImageEditor {
     return await sharp("static/1x1.png").toBuffer()
   }
 
-  async bufferize(binaryImage) {
-    return await sharp(binaryImage).toBuffer()
+  async _blankImage(width, height) {
+    logger.debug(`Creating image ${ width }, ${ height }`)
+    return await sharp({
+      create: {
+        width: width,
+        height: height,
+        channels: 3,
+        background: { r: 0, g: 255, b: 0 }
+      }
+    }).toBuffer()
   }
 
     async _fitInside(imageBuffer, width, height, fit, noEnlargement) {

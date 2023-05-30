@@ -55,31 +55,16 @@ function _addToJsonMap(bgJson, coords, entry) {
     
     return JSON.stringify(parsedMap, null, 2)
 }
-
-class AdsSnapshot {
+class BaseSnapshot {
 
     // construct from the same fields as in export (retrieved from db)
     // expects an empty object if no snapshots exist yet
     constructor(previousSnapshot, options) {
         this.bg = previousSnapshot
-        this.latestDownloadTimestamp = this.bg.latestDownloadTimestamp
         this.latestEventId = previousSnapshot.latestEventId
-        this.linksMapJSON = previousSnapshot.linksMapJSON
+        this.picMapJSON = previousSnapshot.picMapJSON
         this.bgBinary = previousSnapshot.bigPicBinary
         this.overlays = []
-    }
-
-    // TODO add transaction hash
-    _addToLinksMapJSON(linksMapJSON, newAd) {
-        return _addToJsonMap(
-            linksMapJSON,
-            newAd,
-            {
-                adText: newAd.adText,
-                adUrl: newAd.adUrl,
-                imageSourceUrl: newAd.imageSourceUrl
-            }
-        )
     }
 
     getBGLatestAdID(){
@@ -90,38 +75,12 @@ class AdsSnapshot {
         return this.latestEventId
     }
 
-    getBGLatestAdDownloadTimestamp() {
-        return this.bg.latestDownloadTimestamp
-    }
-
-    getLatestAdDownloadTimestamp() {
-        return this.latestDownloadTimestamp
-    }
-
-    // overlays an ad over given snapshot
-    // is collecting new ads into buffer array for subsequent merge
-    async overlay(ad) {
-        if (this.mergedBigPic) {
-            throw new Error("Cannot overlay - merged big pic already")}
-        // input, top and left are params for shark image processor
-        const ie = new ImageEditor({})
-        const newOverlay = { 
-            // put 1 px if imageForPixelMap is null
-            // note: buffer key is 
-            input: ad.imageForPixelMap ? ad.imageForPixelMap.buffer : await ie.blankImage(1,1),
-            top: pixelCoords(ad).fromY,
-            left: pixelCoords(ad).fromY
-        }
-        this.overlays.push(newOverlay)
-        this.linksMapJSON = this._addToLinksMapJSON(this.linksMapJSON, ad)
-        this.latestEventId = ad.ID
-        if ( ad.downloadTimestamp > this.latestDownloadTimestamp ) {
-            this.latestDownloadTimestamp = ad.downloadTimestamp
-        }
-    }
-
     gotOverlays() {
         return (this.overlays.length > 0)
+    }
+
+    getLinksMapJSON() {
+        return this.picMapJSON
     }
 
     // merge all images to one
@@ -136,8 +95,59 @@ class AdsSnapshot {
         return this.mergedBigPic
     }
 
-    getLinksMapJSON() {
-        return this.linksMapJSON
+    // overlays an ad over given snapshot
+    // is collecting new ads into buffer array for subsequent merge
+    async overlay(ad) {
+        if (this.mergedBigPic) {
+            throw new Error("Cannot overlay - merged big pic already")}
+        // input, top and left are params for shark image processor
+        const newOverlay = { 
+            // put 1 px if imageForPixelMap is null
+            // note: buffer key is 
+            input: await this.buildInputImage(ad),
+            top: pixelCoords(ad).fromY,
+            left: pixelCoords(ad).fromX
+        }
+        this.overlays.push(newOverlay)
+        this.picMapJSON = this._addToLinksMapJSON(this.picMapJSON, ad)
+        this.latestEventId = ad.ID
+        if ( ad.downloadTimestamp > this.latestDownloadTimestamp ) {
+            this.latestDownloadTimestamp = ad.downloadTimestamp
+        }
+    }
+}
+
+class AdsSnapshot extends BaseSnapshot {
+
+    constructor(previousSnapshot, options) {
+        super(previousSnapshot, options)
+        this.latestDownloadTimestamp = this.bg.latestDownloadTimestamp
+    }
+
+    // TODO add transaction hash
+    _addToLinksMapJSON(picMapJSON, newAd) {
+        return _addToJsonMap(
+            picMapJSON,
+            newAd,
+            {
+                adText: newAd.adText,
+                adUrl: newAd.adUrl,
+                imageSourceUrl: newAd.imageSourceUrl
+            }
+        )
+    }
+
+    getBGLatestAdDownloadTimestamp() {
+        return this.bg.latestDownloadTimestamp
+    }
+
+    getLatestAdDownloadTimestamp() {
+        return this.latestDownloadTimestamp
+    }
+
+    async buildInputImage(event) {
+        const ie = new ImageEditor({})
+        return event.imageForPixelMap ? event.imageForPixelMap.buffer : await ie.blankImage(1,1)
     }
 }
 

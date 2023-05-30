@@ -120,7 +120,7 @@ class DB {
       latestEventId: 0, // this is also unique ID of the snapshot
       bigPicUrl: null,
       bigPicBinary: await ie.createBackgroundImage(this.conf.default_bg_path),
-      linksMapJSON: '{}',
+      picMapJSON: '{}',
       latestDownloadTimestamp: 0
     }
     const [res, err] = await withErrorHandling(
