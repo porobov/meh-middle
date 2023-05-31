@@ -13,43 +13,33 @@ async function main() {
 
 let db = new DB(config)
 
-
-    async function _blankImage(width, height) {
-        return sharp({
-            create: {
-                width: width,
-                height: height,
-                channels: 3,
-                background: { r: 255, g: 255, b: 255 } // white background
-            }
-        }).toBuffer()
-    }
-
-    async function createBlankImage() {
-        return await sharp({
-          create: {
-            width: 1,
-            height: 1,
-            channels: 4,
-            background: { r: 255, g: 255, b: 255, alpha: 1 } // white background with alpha channel
-          }
-        }).toBuffer();
-      }
+  async function createGreenImage() {
+    const greenImage = await sharp({
+      create: {
+        width: 20,
+        height: 20,
+        channels: 4,
+        background: { r: 0, g: 255, b: 0, alpha: 1 },
+      },
+    }).png().toBuffer();
+    return greenImage;
+  }
+      
 
 
-    async function overlayAds(background, ads) {
-        return await sharp(background)
-            .composite(ads)
-            .toBuffer();
-    }
+  async function overlayAds(background, ads) {
+    return await sharp(background)
+      .composite(ads)
+      .toBuffer();
+  }
 
     async function createBackgroundImage(source) {
-        return  sharp(source)
+        return sharp(source)
             .toBuffer();
     }
 
     const background = await createBackgroundImage(source)
-    const blankImage = await createBlankImage()
+    const greenImage = await createGreenImage()
 
     // get image from db
     await db.connect()
@@ -67,11 +57,11 @@ let db = new DB(config)
     console.log(sizeOf(imageFromWeb))
 
   const ads = [
-    {
-      input: await sharp("static/1x1.png").toBuffer(),
-      top: 1,
-      left: 1
-    },
+    // {
+    //   input: await sharp("static/1x1.png").toBuffer(),
+    //   top: 1,
+    //   left: 1
+    // },
     {
       input: imageFromWeb,
       top: 100,
@@ -81,7 +71,13 @@ let db = new DB(config)
       input: dbImage,
       top: 200,
       left: 200,
-    },  ]
+    },
+    {
+      input: greenImage,
+      top: 300,
+      left: 200,
+    },
+  ]
 
     const result = await overlayAds(background, ads)
     fs.writeFileSync('10x10(web).png', imageFromWeb, function(err) {
