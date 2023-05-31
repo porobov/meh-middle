@@ -55,6 +55,7 @@ function _addToJsonMap(bgJson, coords, entry) {
     
     return JSON.stringify(parsedMap, null, 2)
 }
+
 class BaseSnapshot {
 
     // construct from the same fields as in export (retrieved from db)
@@ -95,6 +96,15 @@ class BaseSnapshot {
         return this.mergedBigPic
     }
 
+    // TODO add transaction hash
+    _addToLinksMapJSON(picMapJSON, newEvent) {
+        return _addToJsonMap(
+            picMapJSON,
+            newEvent,
+            this._buildJSONMapEntry(newEvent)
+        )
+    }
+
     // overlays an ad over given snapshot
     // is collecting new ads into buffer array for subsequent merge
     async overlay(ad) {
@@ -104,16 +114,18 @@ class BaseSnapshot {
         const newOverlay = { 
             // put 1 px if imageForPixelMap is null
             // note: buffer key is 
-            input: await this.buildInputImage(ad),
+            input: await this._buildInputImage(ad),
             top: pixelCoords(ad).fromY,
             left: pixelCoords(ad).fromX
         }
         this.overlays.push(newOverlay)
         this.picMapJSON = this._addToLinksMapJSON(this.picMapJSON, ad)
         this.latestEventId = ad.ID
-        if ( ad.downloadTimestamp > this.latestDownloadTimestamp ) {
-            this.latestDownloadTimestamp = ad.downloadTimestamp
-        }
+        this._setLatestDownloadTimestamp(ad)
+    }
+
+    // empty function. does nothing for the base snapshot. Overriden in AdsSnapshot
+    _setLatestDownloadTimestamp(ad) {
     }
 }
 
@@ -124,17 +136,17 @@ class AdsSnapshot extends BaseSnapshot {
         this.latestDownloadTimestamp = this.bg.latestDownloadTimestamp
     }
 
-    // TODO add transaction hash
-    _addToLinksMapJSON(picMapJSON, newAd) {
-        return _addToJsonMap(
-            picMapJSON,
-            newAd,
-            {
-                adText: newAd.adText,
-                adUrl: newAd.adUrl,
-                imageSourceUrl: newAd.imageSourceUrl
-            }
-        )
+    async _buildInputImage(event) {
+        const ie = new ImageEditor({})
+        return event.imageForPixelMap ? event.imageForPixelMap.buffer : await ie.blankImage(1,1)
+    }
+
+    _buildJSONMapEntry(newEvent) {
+        return {
+            adText: newEvent.adText,
+            adUrl: newEvent.adUrl,
+            imageSourceUrl: newEvent.imageSourceUrl
+        }
     }
 
     getBGLatestAdDownloadTimestamp() {
@@ -145,16 +157,16 @@ class AdsSnapshot extends BaseSnapshot {
         return this.latestDownloadTimestamp
     }
 
-    async buildInputImage(event) {
-        const ie = new ImageEditor({})
-        return event.imageForPixelMap ? event.imageForPixelMap.buffer : await ie.blankImage(1,1)
+    _setLatestDownloadTimestamp(ad) {
+        if (ad.downloadTimestamp > this.latestDownloadTimestamp) {
+            this.latestDownloadTimestamp = ad.downloadTimestamp
+        }
     }
 }
 
 class BuySellSnapshot {
     constructor(previousSnapshot) {
         this.bg = previousSnapshot
-        this._gotOverlays = false
         this.latestEventId = previousSnapshot.latestEventId
         this.ownershipMapJSON = previousSnapshot.ownershipMapJSON
         this.overlays = []
@@ -197,9 +209,6 @@ class BuySellSnapshot {
         return (this.overlays.length > 0)
     }
 
-    getBGLatestTransactionID() {
-        return this.bg.latestEventId
-    }
 
     getLatestTransactionID() {
         return this.latestEventId
