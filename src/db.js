@@ -130,10 +130,12 @@ class DB {
   }
 
   async putEmptyBuySellSnapshot() {
+    let ie = new ImageEditor({})
     let emptySnapshot = {
       // also see snapshot validity check 
       latestEventId: 0,
-      ownershipMapJSON: '{}'
+      bigPicBinary: await ie.createBackgroundImage(this.conf.default_bg_path),
+      picMapJSON: '{}'
     }
     const [res, err] = await withErrorHandling(
       async () => await this.buySellSnapshots.insertOne(emptySnapshot),

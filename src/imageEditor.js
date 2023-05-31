@@ -15,35 +15,35 @@ class ImageEditor {
     this.conf = conf
   }
 
-  async blankImage(width, height) {
+  async _blankImage(width, height) {
     return await sharp("static/1x1.png").toBuffer()
   }
 
-  async _blankImage(width, height) {
+  async blankImage(width, height) {
     logger.debug(`Creating image ${ width }, ${ height }`)
     return await sharp({
       create: {
         width: width,
         height: height,
-        channels: 3,
+        channels: 4,
         background: { r: 0, g: 255, b: 0 }
       }
-    }).toBuffer()
+    }).png().toBuffer()
   }
 
-    async _fitInside(imageBuffer, width, height, fit, noEnlargement) {
-        try {
-            return [await sharp(imageBuffer)
-              .resize(width, height, {
-                fit: fit,
-                withoutEnlargement: noEnlargement
-              })
-              .toBuffer(),
-              null]
-          } catch (err) {
-            logger.error(err, { module: MODULE_NAME, function: "_fitInside" })
-            return [null, err]
-          }
+  async _fitInside(imageBuffer, width, height, fit, noEnlargement) {
+    try {
+      return [await sharp(imageBuffer)
+        .resize(width, height, {
+          fit: fit,
+          withoutEnlargement: noEnlargement
+        })
+        .toBuffer(),
+        null]
+    } catch (err) {
+      logger.error(err, { module: MODULE_NAME, function: "_fitInside" })
+      return [null, err]
+    }
     }
 
     async overlayAds(background, ads) {

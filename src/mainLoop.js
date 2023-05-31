@@ -194,13 +194,11 @@ async function mainLoop(db) {
     logger.debug(`Got ${ adsCount } ads to overlay`)
     // save new snapshot to db (saving only fully processed snapshots)
     if ( adsSnapshot.gotOverlays() ) {
-        const bigPicBinary = await adsSnapshot.getMergedBigPic()
         const newSnapshot =  {
             latestEventId: adsSnapshot.getLatestAdID(),
             latestDownloadTimestamp: adsSnapshot.getLatestAdDownloadTimestamp(),
             picMapJSON: adsSnapshot.getLinksMapJSON(),
-            bigPicBinary: bigPicBinary,  // is used as background
-            adsBigPicUrl: bigPicBinary ? await wg.uploadAdsSnapshotPic(bigPicBinary) : null
+            bigPicBinary: await adsSnapshot.getMergedBigPic(),
         }
         // check snapshot validity (important as we are not catching upload errors)
         // these are zero snapshot params (see db)
@@ -209,7 +207,6 @@ async function mainLoop(db) {
             newSnapshot.latestEventId > 0
             && newSnapshot.picMapJSON != '{}'
             && newSnapshot.bigPicBinary != null
-            && newSnapshot.adsBigPicUrl != null
         ) {
             if (await db.saveAdsSnapshot(newSnapshot)) {
                 logger.info(`Saved snapshot with latest ad ID: ${newSnapshot.latestEventId}`)
@@ -223,13 +220,16 @@ async function mainLoop(db) {
     // CONSTRUCT BUY SELL SNAPSHOT 
 
     const previousBSSnapshot = await db.getLatestBuySellSnapshot()
-    if (previousBSSnapshot == null) { return }  // can happen on error
+    if (previousBSSnapshot == null) { 
+        logger.error(`Could not retrieve latest BS snapshot with getLatestBuySellSnapshot()`)
+        return 
+    }  // can happen on error
     const buySellSnapshot = new BuySellSnapshot(previousBSSnapshot)
 
     // retrieve events with higher ID, sorted  by ID
     // (returns cursor)
     const transactionsToBeAdded = 
-        await db.getTransactionsFromID(buySellSnapshot.getLatestTransactionID())
+        await db.getTransactionsFromID(buySellSnapshot.getLatestAdID())
     for await (const buySellTx of transactionsToBeAdded) {
         await buySellSnapshot.overlay(buySellTx)
     }
@@ -237,14 +237,16 @@ async function mainLoop(db) {
     if ( buySellSnapshot.gotOverlays() ) {
         // upload big pic and links map
         const newSnapshot =  {
-            latestEventId: buySellSnapshot.getLatestTransactionID(),
-            ownershipMapJSON: buySellSnapshot.getOwnershipMapJSON(),
+            latestEventId: buySellSnapshot.getLatestAdID(),
+            picMapJSON: buySellSnapshot.getLinksMapJSON(),
+            bigPicBinary: await buySellSnapshot.getMergedBigPic(),
         }
         // check snapshot validity (important as we are not catching upload errors)
         // these are zero snapshot params (see db)
         if (
             newSnapshot.latestEventId != null 
-            && newSnapshot.ownershipMapJSON != '[]'
+            && newSnapshot.picMapJSON != '[]'
+            && newSnapshot.bigPicBinary != null
         ) {
             if (await db.saveBuySellSnapshot(newSnapshot)) {
                 logger.info(`Saved buySell snapshot. Latest buySell ID: ${ newSnapshot.latestEventId }`)

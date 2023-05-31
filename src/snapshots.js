@@ -26,8 +26,8 @@ const pixelCoords = (event) => {
         return {
             fromX: toPixels(event.fromX),
             fromY: toPixels(event.fromY),
-            toX: toPixels(event.toX),
-            toY: toPixels(event.toY)
+            toX: toPixels(event.toX) + 10,
+            toY: toPixels(event.toY) + 10
         }
     } else {
         const blockXY = _blockXY(event.tokenId)
@@ -39,6 +39,9 @@ const pixelCoords = (event) => {
         }
     }
 }
+const width = (pxCoords) => pxCoords.toX - pxCoords.fromX
+const height = (pxCoords) => pxCoords.toY - pxCoords.fromY
+
 function _addToJsonMap(bgJson, coords, entry) {
     let parsedMap = JSON.parse(bgJson)
     if ( coords.fromX ) {
@@ -110,13 +113,12 @@ class BaseSnapshot {
     async overlay(ad) {
         if (this.mergedBigPic) {
             throw new Error("Cannot overlay - merged big pic already")}
+        const pixels = pixelCoords(ad)
         // input, top and left are params for shark image processor
         const newOverlay = { 
-            // put 1 px if imageForPixelMap is null
-            // note: buffer key is 
-            input: await this._buildInputImage(ad),
-            top: pixelCoords(ad).fromY,
-            left: pixelCoords(ad).fromX
+            input: await this._buildInputImage(ad, pixels),
+            top: pixels.fromY,
+            left: pixels.fromX
         }
         this.overlays.push(newOverlay)
         this.picMapJSON = this._addToLinksMapJSON(this.picMapJSON, ad)
@@ -124,7 +126,7 @@ class BaseSnapshot {
         this._setLatestDownloadTimestamp(ad)
     }
 
-    // empty function. does nothing for the base snapshot. Overriden in AdsSnapshot
+    // does nothing for the base snapshot. Overriden in AdsSnapshot
     _setLatestDownloadTimestamp(ad) {
     }
 }
@@ -136,9 +138,11 @@ class AdsSnapshot extends BaseSnapshot {
         this.latestDownloadTimestamp = this.bg.latestDownloadTimestamp
     }
 
-    async _buildInputImage(event) {
+    async _buildInputImage(event, pxCoords) {
+        // put 1 px if imageForPixelMap is null
+        // note: buffer key is
         const ie = new ImageEditor({})
-        return event.imageForPixelMap ? event.imageForPixelMap.buffer : await ie.blankImage(1,1)
+        return event.imageForPixelMap ? event.imageForPixelMap.buffer : await ie.blankImage(width(pxCoords), height(pxCoords))
     }
 
     _buildJSONMapEntry(newEvent) {
@@ -149,6 +153,12 @@ class AdsSnapshot extends BaseSnapshot {
         }
     }
 
+    _setLatestDownloadTimestamp(ad) {
+        if (ad.downloadTimestamp > this.latestDownloadTimestamp) {
+            this.latestDownloadTimestamp = ad.downloadTimestamp
+        }
+    }
+
     getBGLatestAdDownloadTimestamp() {
         return this.bg.latestDownloadTimestamp
     }
@@ -156,68 +166,28 @@ class AdsSnapshot extends BaseSnapshot {
     getLatestAdDownloadTimestamp() {
         return this.latestDownloadTimestamp
     }
-
-    _setLatestDownloadTimestamp(ad) {
-        if (ad.downloadTimestamp > this.latestDownloadTimestamp) {
-            this.latestDownloadTimestamp = ad.downloadTimestamp
-        }
-    }
 }
 
-class BuySellSnapshot {
+class BuySellSnapshot extends BaseSnapshot {
     constructor(previousSnapshot) {
-        this.bg = previousSnapshot
-        this.latestEventId = previousSnapshot.latestEventId
-        this.ownershipMapJSON = previousSnapshot.ownershipMapJSON
-        this.overlays = []
+        super(previousSnapshot)
+    }
+
+    async _buildInputImage(ev, pxCoords) {
+        const ie = new ImageEditor({})
+        return await ie.blankImage(width(pxCoords), height(pxCoords))
     }
 
     // this fuction accepts Transfer(2018 and wrapper), LogBuys(2018) and NewAreaStatus (2016) events
-    _addToOwnershipMapJSON(ownershipMapJSON, buySellTx) {
-        return _addToJsonMap(
-            ownershipMapJSON,
-            buySellTx,
-            { 
-                ...(buySellTx.price !== undefined ? { price: buySellTx.price } : {}),
-                transactionHash: buySellTx.transactionHash,
-                from: buySellTx.from,
-                to: buySellTx.to ? buySellTx.to : buySellTx.address, // address is from LogBuys event
-                contract: buySellTx.contract
-            }
-        )
-    }
-
-    async overlay(buySellTx) {
-        if (this.mergedPic) {
-            throw new Error("Cannot overlay - merged pic already")}
-        // input, top and left are params for shark image processor
-        const ie = new ImageEditor({})
-        const pixels = pixelCoords(buySellTx)
-        const newOverlay = { 
-            input: await ie.blankImage(pixels.toX - pixels.fromX, pixels.toY - pixels.fromY),
-            top: pixels.fromY,
-            left: pixels.fromX
+    _buildJSONMapEntry(buySellTx) {
+        return {
+            ...(buySellTx.price !== undefined ? { price: buySellTx.price } : {}),
+            transactionHash: buySellTx.transactionHash,
+            from: buySellTx.from,
+            to: buySellTx.to ? buySellTx.to : buySellTx.address, // address is from LogBuys event
+            contract: buySellTx.contract
         }
-        this.overlays.push(newOverlay) 
-        this.ownershipMapJSON = this._addToOwnershipMapJSON(
-            this.ownershipMapJSON,
-            buySellTx)
-        this.latestEventId = buySellTx.ID
     }
-
-    gotOverlays() {
-        return (this.overlays.length > 0)
-    }
-
-
-    getLatestTransactionID() {
-        return this.latestEventId
-    }
-
-    getOwnershipMapJSON(){
-        return this.ownershipMapJSON 
-    }
-
 }
 
 module.exports = {
