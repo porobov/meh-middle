@@ -4,3 +4,4 @@ artifacts/
 cache/
 logs/
 .DS_Store
+*.png

@@ -40,25 +40,25 @@ from block ${fromBlock} to ${newEvents.blockNumber}`)
     const buySells2016 = await syncEvents(BUY_SELL_EVENT_NAME, meh2016, newAreaStatus2016mapper)
     const logBuys2018 = await syncEvents( "LogBuys", meh2018, logBuys2018mapper)
     const transfers2018 = await syncEvents( "Transfer", meh2018, transfer2018mapper)
-    const ads2016 = await getFormatedEvents( 0, "NewImage", meh2016, newImage2016mapper)
-    const ads2018 = await getFormatedEvents( 0, "LogAds", meh2018, logAds2018mapper)
+    const ads2016 = await getFormatedEvents("NewImage", meh2016, newImage2016mapper, 0, config.backgoundEventsBlockNumber)
+    const ads2018 = await getFormatedEvents("LogAds", meh2018, logAds2018mapper, 0, config.backgoundEventsBlockNumber)
 
     // BUILDING NEW BACKGROUND SNAPSHOT
     // this is previous background snapshot. 
     // moved it here to create new background
-    let emptySnapshot = { latestEventId: 0, ownershipMapJSON: '{}' }
+    let emptySnapshot = { latestEventId: 0, picMapJSON: '{}' }
     
     const buySellSnapshot = new BuySellSnapshot(emptySnapshot)
     for (const ev of buySells2016) {
         buySellSnapshot.overlay(ev)
     }
-    let snapshot2016length = Object.keys(JSON.parse(buySellSnapshot.getOwnershipMapJSON())).length 
+    let snapshot2016length = Object.keys(JSON.parse(buySellSnapshot.getLinksMapJSON())).length 
     for (const ev of logBuys2018) {
         buySellSnapshot.overlay(ev)
     }
-    let snapshotTotalLength = Object.keys(JSON.parse(buySellSnapshot.getOwnershipMapJSON())).length 
+    let snapshotTotalLength = Object.keys(JSON.parse(buySellSnapshot.getLinksMapJSON())).length 
     console.log(`Snaphot 2016 length ${snapshot2016length}, total: ${snapshotTotalLength}`)
-    let data = buySellSnapshot.getOwnershipMapJSON()
+    let data = buySellSnapshot.getLinksMapJSON()
     fs.writeFileSync(FILE_NAME, data)
 }
 
