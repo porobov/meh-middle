@@ -112,7 +112,7 @@ class DB {
   }
 
   // snapshot to be returned when there are no snapshots yet
-  async putEmptyAdsSnapshot() {
+  async putEmptySnapshot(collection) {
     let ie = new ImageEditor({})
     let emptySnapshot = {
       // see snapshot validity check 
@@ -124,23 +124,18 @@ class DB {
       latestDownloadTimestamp: 0
     }
     const [res, err] = await withErrorHandling(
-      async () => await this.adsSnapshots.insertOne(emptySnapshot),
-      "putEmptyAdsSnapshot")
-    logger.info(`Empty Ads snaphot was recorded to db`)
+      async () => await collection.insertOne(emptySnapshot),
+      `putEmptySnapshot ${ collection.collectionName } `)
+      
+    logger.info(`Empty ${ collection.collectionName } record was put into db`)
+  }
+
+  async putEmptyAdsSnapshot() {
+    await this.putEmptySnapshot(this.adsSnapshots)
   }
 
   async putEmptyBuySellSnapshot() {
-    let ie = new ImageEditor({})
-    let emptySnapshot = {
-      // also see snapshot validity check 
-      latestEventId: 0,
-      bigPicBinary: await ie.createBackgroundImage(this.conf.default_bg_path),
-      picMapJSON: '{}'
-    }
-    const [res, err] = await withErrorHandling(
-      async () => await this.buySellSnapshots.insertOne(emptySnapshot),
-      "putEmptyBuySellSnapshot")
-    logger.info(`Empty BuySell snaphot was recorded to db`)
+    await this.putEmptySnapshot(this.buySellSnapshots)
   }
 
   async createDB() {
