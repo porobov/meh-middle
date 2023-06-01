@@ -99,7 +99,6 @@ class BaseSnapshot {
         return this.mergedBigPic
     }
 
-    // TODO add transaction hash
     _addToLinksMapJSON(picMapJSON, newEvent) {
         return _addToJsonMap(
             picMapJSON,

@@ -33,10 +33,12 @@ class WebGateway {
     }
   }
 
+  async _getImageSize(url) {
+    return await ufs(url)
+  }
+
   // debug function
   _saveImageBufferToDisk(imageBuffer, filename) {
-    // const path = Path.resolve(__dirname, imageName, imageFormat)
-    // const writer = fs.createWriteStream(path)
     fs.writeFileSync(filename, imageBuffer, 'binary', (err) => {
       if (err) throw err
     })
@@ -49,20 +51,13 @@ class WebGateway {
     logger.debug(`The file ${ fileName } has been saved!`);
   }
 
-  async _getImageSize(url) {
-    return await ufs(url)
-  }
-
-  async uploadAdsSnapshotPic(bigPicBinary){
-    // we don't need to upload image the whole snapshot is uploaded to Cloudflare KV
-    const filename = "./logs/hey.png (not uploading image anymore)"
-    // this._saveImageBufferToDisk(bigPicBinary, filename)
-    return filename
+  // debug
+  // We don't need to upload image anymore. the whole snapshot is uploaded to Cloudflare KV
+  saveSnapshotPic(bigPicBinary, filenameWithExtension){
+    this._saveImageBufferToDisk(bigPicBinary, "./logs/" + filenameWithExtension)
   }
 
   async publish(JSON_siteData, keyName){
-    // const fileName = "./logs/hey.json"
-    // this._saveObjectToFile(JSON_siteData, fileName)
     return await this._publishToCF(JSON_siteData, keyName)
   }
 
@@ -90,6 +85,7 @@ class WebGateway {
     }
   }
 }
+
 module.exports = {
   WebGateway,
 }

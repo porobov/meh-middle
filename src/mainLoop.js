@@ -60,7 +60,6 @@ from block ${ fromBlock } to ${newEvents.blockNumber}`)
     async function saveEventsToDB(toBlock, eventName, formatedEvents, db) {
         let insertsCount = 0
         if (formatedEvents.length > 0 && toBlock > 0 ) {
-            // TODO adding events must be parametric
             insertsCount = await db.addEvents(formatedEvents, eventName)
             logger.info(`${ insertsCount } new ${ eventName } events were written to db`)
         }
@@ -194,11 +193,13 @@ async function mainLoop(db) {
     logger.debug(`Got ${ adsCount } ads to overlay`)
     // save new snapshot to db (saving only fully processed snapshots)
     if ( adsSnapshot.gotOverlays() ) {
+        const binary = await adsSnapshot.getMergedBigPic()
+        wg.saveSnapshotPic(binary, "adsSnapshot.png")
         const newSnapshot =  {
             latestEventId: adsSnapshot.getLatestAdID(),
             latestDownloadTimestamp: adsSnapshot.getLatestAdDownloadTimestamp(),
             picMapJSON: adsSnapshot.getLinksMapJSON(),
-            bigPicBinary: await adsSnapshot.getMergedBigPic(),
+            bigPicBinary: binary,
         }
         // check snapshot validity (important as we are not catching upload errors)
         // these are zero snapshot params (see db)
@@ -235,17 +236,18 @@ async function mainLoop(db) {
     }
     // save new snapshot to db (saving only fully processed snapshots)
     if ( buySellSnapshot.gotOverlays() ) {
-        // upload big pic and links map
+        const binary = await buySellSnapshot.getMergedBigPic()
+        wg.saveSnapshotPic(binary, "buySellSnapshot.png")
         const newSnapshot =  {
             latestEventId: buySellSnapshot.getLatestAdID(),
             picMapJSON: buySellSnapshot.getLinksMapJSON(),
-            bigPicBinary: await buySellSnapshot.getMergedBigPic(),
+            bigPicBinary: binary,
         }
         // check snapshot validity (important as we are not catching upload errors)
         // these are zero snapshot params (see db)
         if (
             newSnapshot.latestEventId != null 
-            && newSnapshot.picMapJSON != '[]'
+            && newSnapshot.picMapJSON != '{}'
             && newSnapshot.bigPicBinary != null
         ) {
             if (await db.saveBuySellSnapshot(newSnapshot)) {
@@ -282,6 +284,7 @@ async function mainLoop(db) {
         const isServing = await wg.publish(
                 JSON.stringify(siteData, null, 2),
                 keyName)
+        // https://muddy-truth-5b42.porobov-p3798.workers.dev/?myKey=dosf1MillionEther
         if (isServing) {
             logger.info(`====== Publised to ${ keyName }. Latest blocks checked for \
 NewImage: ${siteData.newImageLatestCheckedBlock}, \
