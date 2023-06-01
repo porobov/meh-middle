@@ -15,12 +15,12 @@ class ImageEditor {
     this.conf = conf
   }
 
-  async _blankImage(width, height) {
+  async transparentImage(width, height) {
     return await sharp("static/1x1.png").toBuffer()
   }
 
   async blankImage(width, height) {
-    logger.debug(`Creating image ${ width }, ${ height }`)
+    // logger.debug(`Creating image ${ width }, ${ height }`)
     return await sharp({
       create: {
         width: width,

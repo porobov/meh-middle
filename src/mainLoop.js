@@ -110,7 +110,7 @@ async function mainLoop(db) {
         if (downloadResult) { 
             fullImageBinary = downloadResult.binary  // note .binary here
             updates.imageExtension = downloadResult.extension
-            logger.info(`Downloaded ${downloadResult.extension} image`)
+            logger.debug(`Downloaded ${downloadResult.extension} image`)
         } else {
             // if failed to download, decide if we want to retry later
             Object.assign(updates, constructRetryParams(error, ad.numOfTries))
@@ -138,7 +138,7 @@ async function mainLoop(db) {
                 // adding ts again for the case when laggards get downloaded and resized
                 // this is actually real successful download ts
                 updates.downloadTimestamp = Date.now() 
-                logger.info(`Created pixel map image for ad`)
+                logger.debug(`Created pixel map image for ad`)
             } else {
                 updates.failedToDownLoad = true  // to prevent it from download tries
                 updates.error = "Failed to resize image. Will be excluded from pixel map (only the image itself)"
@@ -284,11 +284,11 @@ async function mainLoop(db) {
         const isServing = await wg.publish(
                 JSON.stringify(siteData, null, 2),
                 keyName)
-        // https://muddy-truth-5b42.porobov-p3798.workers.dev/?myKey=dosf1MillionEther
+        const cfUrl = "https://muddy-truth-5b42.porobov-p3798.workers.dev/?myKey="
         if (isServing) {
-            logger.info(`====== Publised to ${ keyName }. Latest blocks checked for \
+            logger.info(`== Publised to ${ cfUrl + keyName }. Latest blocks \
 NewImage: ${siteData.newImageLatestCheckedBlock}, \
-BuySell: ${siteData.buySellLatestCheckedBlock} ======`)
+BuySell: ${siteData.buySellLatestCheckedBlock} ==`)
         }
     } else {
         logger.error("Built wrong site data. Some values are absent", siteData)

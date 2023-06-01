@@ -141,7 +141,7 @@ class AdsSnapshot extends BaseSnapshot {
         // put 1 px if imageForPixelMap is null
         // note: buffer key is
         const ie = new ImageEditor({})
-        return event.imageForPixelMap ? event.imageForPixelMap.buffer : await ie.blankImage(width(pxCoords), height(pxCoords))
+        return event.imageForPixelMap ? event.imageForPixelMap.buffer : await ie.transparentImage(width(pxCoords), height(pxCoords))
     }
 
     _buildJSONMapEntry(newEvent) {
