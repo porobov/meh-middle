@@ -25,7 +25,7 @@ class DB {
 
   async connect() {
     const [res, err] = await withErrorHandling(async () => await this.client.connect(), "connect")
-    if (this.client && this.client.topology.isConnected()) {
+    if (this.client && this.client.topology && this.client.topology.isConnected()) {
       this.db = this.client.db(this.conf.dbName)
       // initialize collections
       this.state = this.db.collection("state")
