@@ -14,8 +14,13 @@ const {
     logAds2018mapper 
 } = require("../src/events.js")
 
+let db = null
 const config = hre.config.dbConf
-let db = new DB(config)
+try {
+  db = new DB(config)
+} catch(e) {
+  console.log("Error while creating DB instance", e)
+}
 
 async function main() {
   try {
