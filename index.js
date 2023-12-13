@@ -18,7 +18,7 @@ async function main() {
     // register SIGINT event
 
     process.on('SIGINT', async () => {
-    logger.info('Terminating...Wait for \"terminated\" in logs')
+    logger.info('Terminating...Wait for \"Terminated safely...\" in terminal')
         if (isExecuting) {
             cancelNextCycle = true
         } else {
