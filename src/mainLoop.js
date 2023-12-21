@@ -46,8 +46,9 @@ function constructRetryParams(error, numOfTries) {
 }
 
     async function getFormatedEvents(eventName, contract, mapper, fromBlock, toBlock) {
+        // alchemy returns error when fromBlock cannot be found (different nodes got different block height)
         const newEvents = await contract.getEvents(eventName, fromBlock, toBlock)
-        if ( newEvents == null ) { return null }
+        if ( newEvents == null ) { return [[], null] }
         const formatedEvents = newEvents.decodedEvents.filter(mixedCoordinatesFilter).filter(sellEventFilter).map(mapper)
         logger.debug(
 `Received ${formatedEvents.length} \
@@ -64,9 +65,11 @@ from block ${ fromBlock } to ${newEvents.blockNumber}`)
             logger.info(`${ insertsCount } new ${ eventName } events were written to db`)
         }
 
-        if (formatedEvents.length == insertsCount && toBlock > 0 ) {
-            let saved = await db.saveLatestBlockForEvent(eventName, toBlock)
-            logger.debug(`${ saved ? "Saved" : "FAILED TO SAVE" } block ${toBlock} for ${eventName} event to db`)
+        if (formatedEvents.length == insertsCount) {
+            if (toBlock > 0) { // sometimes alchemy will send error on event fetch (it's ok). toBlock is then null. 
+                let saved = await db.saveLatestBlockForEvent(eventName, toBlock)
+                logger.debug(`${ saved ? "Saved" : "FAILED TO SAVE" } block ${toBlock} for ${eventName} event to db`)
+            }
         } else {
             logger.error(`Retrieved from chain and saved ${eventName} events mismatch`)
         }
