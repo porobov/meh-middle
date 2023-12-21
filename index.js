@@ -6,6 +6,7 @@ const { mainLoop } = require("./src/mainLoop.js")
 // config
 const config = hre.config.dbConf
 const MAIN_LOOP_INTERVAL_MS = config.mainLoopIntervalMs
+const MODULE_NAME = 'index'
 
 let db = new DB(config)
 
@@ -53,9 +54,9 @@ async function main() {
 }
 
 main()
-  .then(() => {  console.log("Terminated safely. CLI is clear"); process.exit(0) })
+  .then(() => {  logger.info("Terminated safely. CLI is clear"); process.exit(0) })
   .catch((error) => {
-    console.error(error);
+    logger.error(error, { module: MODULE_NAME })
     process.exit(1);
   });
 

@@ -4,7 +4,7 @@ const axios = require('axios')
 const { logger } = require("./logger.js")
 const ufs = require("url-file-size")
 const cloudFlareWorkersKV = require('@kikobeats/cloudflare-workers-kv')
-
+const MODULE_NAME = 'web'
 class WebGateway {
   
   constructor(conf) {
@@ -81,7 +81,7 @@ class WebGateway {
       logger.debug(`Published key ${ keyName } to production ${ this.conf.cfNamespaceId } and preview ${ this.conf.cfPreviewNamespaceID }`)
       return true
     } catch (err) {
-      logger.error(err)
+      logger.error(err, { module: MODULE_NAME })
       return false
     }
   }
