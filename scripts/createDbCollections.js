@@ -7,7 +7,7 @@ const { getFormatedEvents, saveEventsToDB } = require("../src/mainLoop.js")
 const hre = require("hardhat");
 
 const { 
-    logBuys2018mapper,
+    logBuys2018mapper, // why not used TODO explain
     newAreaStatus2016mapper,
     transfer2018mapper,
     newImage2016mapper,
@@ -46,7 +46,7 @@ async function main() {
         "Transfer": await getFormatedEvents("Transfer", meh2018, transfer2018mapper, 0, toBlock),
         "NewImage": await getFormatedEvents("NewImage", meh2016, newImage2016mapper, 0, toBlock),
         "LogAds": await getFormatedEvents("LogAds", meh2018, logAds2018mapper, 0, toBlock),
-        // "LogBuys": await getFormatedEvents("LogBuys", meh2018, logBuys2018mapper, 0, toBlock),
+        // "LogBuys": await getFormatedEvents("LogBuys", meh2018, logBuys2018mapper, 0, toBlock), // TODO why commented, explain
       }
       for (const eventName in formatedEvents) {
         await saveEventsToDB(toBlock, eventName, formatedEvents[eventName][0], db) 

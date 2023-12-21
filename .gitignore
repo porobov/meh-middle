@@ -6,3 +6,4 @@ cache/
 logs/
 .DS_Store
 *.png
+static/oldOwnershipMap.json
