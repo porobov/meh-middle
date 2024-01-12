@@ -11,11 +11,13 @@ module.exports = {
     localhost: {
       chainId: 31337,   // specifying chainId manually, used in getConfigChainID() function from tools
       numConfirmations: 0, // specifying numConfirmations manually, used in tools lib
+      chainName: "goerli",
       url: "http://127.0.0.1:8545"
     },
     // read-only mainnet (for blocks import)
     readMain: {
       chainId: 1,  // specifying chainId manually, used in getConfigChainID() function from tools
+      chainName: "mainnet",
       numConfirmations: 0, // specifying numConfirmations manually, used in tools lib
       url: process.env.ALCHEMY_MAINNET_URL !== undefined ? process.env.ALCHEMY_MAINNET_URL : "",
       accounts: {
@@ -28,6 +30,7 @@ module.exports = {
     stateRecordName: "main",  // a single record in state collection is responsible for state
     middleWareID: process.env.MIDDLEWARE_ID !== undefined ? process.env.MIDDLEWARE_ID : "", // affects keyName for cloudflare
     dbAccessUrl: process.env.MONGO_ACCESS_URL !== undefined ? process.env.MONGO_ACCESS_URL : "",
+    envType: process.env.ENV_TYPE,
     dbName: "MillionEther", // affects keyName for cloudflare
     contractName: "MillionEther",
     contractAddress: "0x15dbdB25f870f21eaf9105e68e249E0426DaE916",

@@ -20,7 +20,9 @@ const STATUSCODES_ALLOWING_RETRY = config.statusCodesAllowingRetry
 const DEFAULT_BG_PATH = config.default_bg_path
 const NEW_IMAGE_EVENT_NAME = config.newImageEventName
 const BUY_SELL_EVENT_NAME = config.buySellEventName
-
+const CHAIN_ID = hre.network.config.chainId 
+const CHAIN_NAME = hre.network.config.chainName
+const ENV_TYPE = config.envType
 
 // analyzes error of image download
 function constructRetryParams(error, numOfTries) {
@@ -272,7 +274,8 @@ async function mainLoop(db) {
         newImageLatestCheckedBlock: await db.getLatestBlockForEvent(NEW_IMAGE_EVENT_NAME),
         buySellLatestCheckedBlock: await db.getLatestBlockForEvent(BUY_SELL_EVENT_NAME),
         mehContractAddress: contractAddress,
-        chainID: hre.network.config.chainId,
+        chainID: CHAIN_ID,
+        envType: ENV_TYPE,
         middleWareID: config.middleWareID,
         timestamp: Date.now()
     }
@@ -283,7 +286,8 @@ async function mainLoop(db) {
         && siteData.newImageLatestCheckedBlock > 0
         && siteData.buySellLatestCheckedBlock > 0
     ) {
-        const keyName = siteData.middleWareID + siteData.chainID + config.dbName
+        // const keyName = siteData.middleWareID + siteData.chainID + config.dbName
+        const keyName = CHAIN_NAME + "-" + ENV_TYPE
         const isServing = await wg.publish(
                 JSON.stringify(siteData, null, 2),
                 keyName)
