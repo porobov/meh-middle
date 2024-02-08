@@ -286,7 +286,8 @@ async function mainLoop(db) {
         && siteData.newImageLatestCheckedBlock > 0
         && siteData.buySellLatestCheckedBlock > 0
     ) {
-        // const keyName = siteData.middleWareID + siteData.chainID + config.dbName
+        // for CHAIN_NAME see chainName in hardhat.config.js
+        // for ENV_TYPE see .env file
         const keyName = CHAIN_NAME + "-" + ENV_TYPE
         const isServing = await wg.publish(
                 JSON.stringify(siteData, null, 2),
