@@ -26,7 +26,7 @@ class DB {
   async connect() {
     const [res, err] = await withErrorHandling(async () => await this.client.connect(), "connect")
     if (this.client && this.client.topology && this.client.topology.isConnected()) {
-      this.db = this.client.db(this.conf.dbName)
+      this.db = this.client.db(hre.network.config.chainName)
       // initialize collections
       this.state = this.db.collection("state")
       this.ads = this.db.collection("ads")

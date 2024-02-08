@@ -79,7 +79,7 @@ from block ${ fromBlock } to ${newEvents.blockNumber}`)
 
 async function mainLoop(db) {
     let contractName = config.contractName
-    let contractAddress = config.contractAddress
+    let contractAddress = config.contractAddress[CHAIN_ID]
     let contract = new MillionEther(contractName, contractAddress)
     let oldMehContract = new MillionEther(contractName, contractAddress)
 

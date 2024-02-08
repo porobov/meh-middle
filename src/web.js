@@ -62,7 +62,7 @@ class WebGateway {
   }
 
   // https://developers.cloudflare.com/api/operations/workers-kv-namespace-write-key-value-pair-with-metadata
-  // publishig both to production and preview namespaces
+  // publishig to production namespace
   // TODO gives this - (node:20670) ExperimentalWarning: The Fetch API is an experimental feature. This feature could change at any time
   async _publishToCF(JSON_siteData, keyName) {
     const store = cloudFlareWorkersKV({
@@ -70,15 +70,9 @@ class WebGateway {
       key: this.conf.cfApiToken,
       namespaceId: this.conf.cfNamespaceId
     })
-    const previewStore = cloudFlareWorkersKV({
-      accountId: this.conf.cfAccountID,
-      key: this.conf.cfApiToken,
-      namespaceId: this.conf.cfPreviewNamespaceID
-    })
     try {
       await store.set(keyName, JSON.stringify(JSON_siteData))
-      await previewStore.set(keyName, JSON.stringify(JSON_siteData))
-      logger.debug(`Published key ${ keyName } to production ${ this.conf.cfNamespaceId } and preview ${ this.conf.cfPreviewNamespaceID }`)
+      logger.debug(`Published key ${ keyName } to production ${ this.conf.cfNamespaceId }`)
       return true
     } catch (err) {
       logger.error(err, { module: MODULE_NAME })

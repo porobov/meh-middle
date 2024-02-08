@@ -21,7 +21,8 @@ const FILE_NAME = './static/oldOwnershipMap.json'
 async function mainLoop() {
     const signer = (await hre.ethers.getSigners())[0]
     let contractName = config.contractName
-    let contractAddress = config.contractAddress
+    const chainId = hre.network.config.chainId
+    let contractAddress = config.contractAddress[chainId]
     let meh2016 = new MillionEther(contractName, contractAddress)
     let meh2018 = new MillionEther(contractName, contractAddress, new ethers.Contract(newMehAddress, newMehAbi, signer))
     
@@ -40,8 +41,8 @@ from block ${fromBlock} to ${newEvents.blockNumber}`)
     const buySells2016 = await syncEvents(BUY_SELL_EVENT_NAME, meh2016, newAreaStatus2016mapper)
     const logBuys2018 = await syncEvents( "LogBuys", meh2018, logBuys2018mapper)
     const transfers2018 = await syncEvents( "Transfer", meh2018, transfer2018mapper)
-    const ads2016 = await getFormatedEvents("NewImage", meh2016, newImage2016mapper, 0, config.backgoundEventsBlockNumber)
-    const ads2018 = await getFormatedEvents("LogAds", meh2018, logAds2018mapper, 0, config.backgoundEventsBlockNumber)
+    const ads2016 = await getFormatedEvents("NewImage", meh2016, newImage2016mapper, 0, config.backgoundEventsBlockNumber[chainId])
+    const ads2018 = await getFormatedEvents("LogAds", meh2018, logAds2018mapper, 0, config.backgoundEventsBlockNumber[chainId])
 
     // BUILDING NEW BACKGROUND SNAPSHOT
     // this is previous background snapshot. 

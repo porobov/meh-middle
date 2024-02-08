@@ -29,18 +29,19 @@ async function main() {
 
       const signer = (await hre.ethers.getSigners())[0]
       let contractName = config.contractName
-      let contractAddress = config.contractAddress
+      const chainId = hre.network.config.chainId
+      let contractAddress = config.contractAddress[chainId]
       let meh2016 = new MillionEther(contractName, contractAddress)
       let meh2018 = new MillionEther(
           contractName,
-          config.meh2018AddressMain,
+          config.meh2018AddressMain[chainId],
           new ethers.Contract(
-            config.meh2018AddressMain,
+            config.meh2018AddressMain[chainId],
             config.meh2018Abi,
             signer))
       
       // populate db with old events
-      const toBlock = config.backgoundEventsBlockNumber
+      const toBlock = config.backgoundEventsBlockNumber[chainId]
       const formatedEvents = {
         "NewAreaStatus": await getFormatedEvents("NewAreaStatus", meh2016, newAreaStatus2016mapper, 0, toBlock),
         "Transfer": await getFormatedEvents("Transfer", meh2018, transfer2018mapper, 0, toBlock),
