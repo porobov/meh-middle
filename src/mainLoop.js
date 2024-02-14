@@ -268,6 +268,7 @@ async function mainLoop(db) {
     // PUBLISH SITE DATA
     // pushes data on every cycle
     // gets all fields from db (independant of the above code)
+    // described in meh-ressurections README
     const siteData = {
         adsSnapshot: await db.getAdsSnapshotBeforeID('infinity'),
         buySellSnapshot: await db.getLatestBuySellSnapshot(),

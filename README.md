@@ -6,3 +6,9 @@ npx hardhat run scripts/createDbCollections.js
 
 ## Run
 npx hardhat run index.js --network readMain
+
+## Naming DBs and keys for Cloudlfare KV storage
+- saves to DB named after network in use (e.g. mainnet). Uses hardhat config for names
+- publishes to KV with CF_NAMESPACE_ID (from .env)
+- the key name is constructed as CHAIN_NAME + "-" + ENV_TYPE (e.g. mainnet-public)
+- CF worker makes that KV available 
