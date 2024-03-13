@@ -290,9 +290,7 @@ async function mainLoop(db) {
         // for CHAIN_NAME see chainName in hardhat.config.js
         // for ENV_TYPE see .env file
         const keyName = CHAIN_NAME + "-" + ENV_TYPE
-        const isServing = await wg.publish(
-                JSON.stringify(siteData, null, 2),
-                keyName)
+        const isServing = await wg.publish(siteData, keyName)
         const cfUrl = "https://muddy-truth-5b42.porobov-p3798.workers.dev/?myKey="
         if (isServing) {
             logger.info(`== Publised to ${ cfUrl + keyName }. Latest blocks \

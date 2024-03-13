@@ -58,7 +58,7 @@ class WebGateway {
   }
 
   async publish(JSON_siteData, keyName){
-    return await this._publishToCF(JSON_siteData, keyName)
+    return await this._publishToCF(JSON.stringify(JSON_siteData), keyName)
   }
 
   // https://developers.cloudflare.com/api/operations/workers-kv-namespace-write-key-value-pair-with-metadata
