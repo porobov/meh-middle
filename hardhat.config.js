@@ -57,7 +57,7 @@ module.exports = {
     statusCodesAllowingRetry: [408, 502, 503, 504, 429],  // downloader will try to download images again
     thumbnailParams: { width: 400, height: 400 },
     default_bg_path: "./static/bg.png", // path to bg image for pixelmap
-    mainLoopIntervalMs: 1000,  // 10 second (actually a pause between cycles)
+    mainLoopIntervalMs: 5000,  // actually a pause between cycles
     cfApiToken: process.env.CF_API_TOKEN !== undefined ? process.env.CF_API_TOKEN : "",
     cfNamespaceId: process.env.CF_NAMESPACE_ID !== undefined ? process.env.CF_NAMESPACE_ID : "",
     cfAccountID: process.env.CF_ACCOUNT_ID !== undefined ? process.env.CF_ACCOUNT_ID : "",

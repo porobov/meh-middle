@@ -266,39 +266,44 @@ async function mainLoop(db) {
 
 
     // PUBLISH SITE DATA
-    // pushes data on every cycle
+    // pushes data on every cycle to Cloudflare KV storage
     // gets all fields from db (independant of the above code)
     // described in meh-ressurections README
-    const siteData = {
-        adsSnapshot: await db.getAdsSnapshotBeforeID('infinity'),
-        buySellSnapshot: await db.getLatestBuySellSnapshot(),
-        newImageLatestCheckedBlock: await db.getLatestBlockForEvent(NEW_IMAGE_EVENT_NAME),
-        buySellLatestCheckedBlock: await db.getLatestBlockForEvent(BUY_SELL_EVENT_NAME),
-        mehContractAddress: contractAddress,
-        chainID: CHAIN_ID,
-        envType: ENV_TYPE,
-        middleWareID: config.middleWareID,
-        timestamp: Date.now()
-    }
-    // check that all inportant values are present
-    if (
-        siteData.adsSnapshot != {}
-        && siteData.buySellSnapshot != {}
-        && siteData.newImageLatestCheckedBlock > 0
-        && siteData.buySellLatestCheckedBlock > 0
-    ) {
-        // for CHAIN_NAME see chainName in hardhat.config.js
-        // for ENV_TYPE see .env file
-        const keyName = CHAIN_NAME + "-" + ENV_TYPE
-        const isServing = await wg.publish(siteData, keyName)
-        const cfUrl = "https://muddy-truth-5b42.porobov-p3798.workers.dev/?myKey="
-        if (isServing) {
-            logger.info(`== Publised to ${ cfUrl + keyName }. Latest blocks \
+    // publishing only when snapshots are changed. 
+    if ( adsSnapshot.gotOverlays() || buySellSnapshot.gotOverlays() ) {
+        const siteData = {
+            adsSnapshot: await db.getAdsSnapshotBeforeID('infinity'),
+            buySellSnapshot: await db.getLatestBuySellSnapshot(),
+            newImageLatestCheckedBlock: await db.getLatestBlockForEvent(NEW_IMAGE_EVENT_NAME),
+            buySellLatestCheckedBlock: await db.getLatestBlockForEvent(BUY_SELL_EVENT_NAME),
+            mehContractAddress: contractAddress,
+            chainID: CHAIN_ID,
+            envType: ENV_TYPE,
+            middleWareID: config.middleWareID,
+            timestamp: Date.now()
+        }
+        // check that all inportant values are present
+        if (
+            siteData.adsSnapshot != {}
+            && siteData.buySellSnapshot != {}
+            && siteData.newImageLatestCheckedBlock > 0
+            && siteData.buySellLatestCheckedBlock > 0
+        ) {
+            // for CHAIN_NAME see chainName in hardhat.config.js
+            // for ENV_TYPE see .env file
+            const keyName = CHAIN_NAME + "-" + ENV_TYPE
+            const isServing = await wg.publish(siteData, keyName)
+            const cfUrl = "https://muddy-truth-5b42.porobov-p3798.workers.dev/?myKey="
+            if (isServing) {
+                logger.info(`== Publised to ${cfUrl + keyName}. Latest blocks \
 NewImage: ${siteData.newImageLatestCheckedBlock}, \
 BuySell: ${siteData.buySellLatestCheckedBlock} ==`)
+            }
+        } else {
+            logger.error("Built wrong site data. Some values are absent", siteData)
         }
     } else {
-        logger.error("Built wrong site data. Some values are absent", siteData)
+        logger.debug("No changes in snapshots. Nothing to push to KV storage")
     }
 }
 
