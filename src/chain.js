@@ -25,7 +25,12 @@ class MillionEther {
         blockNumber: latestBlock
       };
     } catch (err) {
-      logger.error(err, { module: MODULE_NAME })
+      // skipping error code "-32000", which is:
+      // One of the blocks specified in filter (fromBlock, toBlock or blockHash) cannot be found.
+      // This is ethereum node sync issues. Some nodes are faster than others.
+      if (err?.code !== -32000) {
+        logger.error(err, { module: MODULE_NAME });
+      }
       return null
     }
   }
