@@ -19,14 +19,14 @@ class ImageEditor {
     return await sharp("static/1x1.png").toBuffer()
   }
 
-  async blankImage(width, height) {
+  async blankImage(width, height, color) {
     // logger.debug(`Creating image ${ width }, ${ height }`)
     return await sharp({
       create: {
         width: width,
         height: height,
         channels: 4,
-        background: { r: 0, g: 255, b: 0 }
+        background: color
       }
     }).png().toBuffer()
   }

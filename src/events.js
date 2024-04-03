@@ -19,7 +19,14 @@ const sellEventFilter = ev => {
 
 const commonFields = (ev) => {
     return {
-        ID: ev.blockNumber * 100000 + ev.logIndex,
+        // when wrapper will put ads to 2016 there will be overlap in ids with 2018
+        // 2018 Transfer event doesn't have ID field - using logIndex
+        // using block number to prevent IDs intersection
+        // multiplying by 100000 to prevent intersection and to visually see IDs
+        // large number to allow high logIndex
+        // means that 100000 events can be thrown within single block with no intersection
+        // IDtest: ev.args?.ID ? ev.args.ID.toNumber() : "noID",
+        ID: ev.blockNumber * 100000 + ev.logIndex, // WARNING!!! see _buildInputImage in snapshots
         transactionHash: ev.transactionHash
     }
 }

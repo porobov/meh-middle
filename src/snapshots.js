@@ -1,5 +1,6 @@
 const { logger } = require("ethers")
 const { ImageEditor } = require("./imageEditor.js")
+const hre = require("hardhat");
 
 function _blockID(x, y) {
     return (y - 1) * 100 + x;
@@ -174,7 +175,28 @@ class BuySellSnapshot extends BaseSnapshot {
 
     async _buildInputImage(ev, pxCoords) {
         const ie = new ImageEditor({})
-        return await ie.blankImage(width(pxCoords), height(pxCoords))
+
+        // defining colors for tiles. 
+        const MEH_2016_COLOR = { r: 208, g: 0, b: 162 } // DARK_PURPLE
+        const MEH_2018_COLOR = { r: 255, g: 0, b: 199 } // PURPLE
+        const WRAPPED_BLOCK_COLOR = { r: 0, g: 194, b: 255 } // BLUE
+        const IMPOSSIBLE_COLOR = { r: 0, g: 139, b: 183 } // dark-blue (should never come up - debugging)
+        let color = IMPOSSIBLE_COLOR
+
+        // select color for legacy blocks
+        if (ev.contract == "2016") { color = MEH_2016_COLOR }
+        if (ev.contract == "2018") { color = MEH_2018_COLOR }
+
+        // wrapped tiles
+        // all tiles purchased after backgoundEventsBlockNumber are considered wrapped
+        // Will not color properly unwrapped blocks
+        const chainId = hre.network.config.chainId
+        const fromBlock = hre.config.dbConf.backgoundEventsBlockNumber[chainId]
+        // see events.js to logic behind 100000 number 
+        if (ev.contract == "2016" && ev.ID > fromBlock * 100000) { color = WRAPPED_BLOCK_COLOR }
+
+        // build image
+        return await ie.blankImage(width(pxCoords), height(pxCoords), color)
     }
 
     // this fuction accepts Transfer(2018 and wrapper), LogBuys(2018) and NewAreaStatus (2016) events
