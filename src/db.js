@@ -150,6 +150,15 @@ class DB {
     await this.putEmptyBuySellSnapshot()
   }
 
+  // Note: 
+  // We have Transfer events both in 2018 and 2024 contracts. 
+  // They share single latestBlockForEvent record, 
+  // which is "latestBlockForTransfer" in "state collection"
+  // That's ok. Because we read 2018 contract only when creating DB 
+  // after that we get Transfer events only from 2024. 
+  // 
+  // Be carefull when deploying to testnet. 
+  // backgoundEventsBlockNumber in config must equal the block of deployment
   async saveLatestBlockForEvent(eventName, latestBlock) {
     var myquery = { state_id: this.tempStateId };
     var newvalues = { $set: { [this.recordNameForEvent(eventName)]: latestBlock } };

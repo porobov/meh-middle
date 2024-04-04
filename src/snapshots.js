@@ -177,6 +177,8 @@ class BuySellSnapshot extends BaseSnapshot {
         const ie = new ImageEditor({})
 
         // defining colors for tiles. 
+        // Meh 2018 will overwrite all 2016 tiles as all the tiles from 
+        // 2016 are imported to 2018
         const MEH_2016_COLOR = { r: 208, g: 0, b: 162 } // DARK_PURPLE
         const MEH_2018_COLOR = { r: 255, g: 0, b: 199 } // PURPLE
         const WRAPPED_BLOCK_COLOR = { r: 0, g: 194, b: 255 } // BLUE
@@ -186,14 +188,7 @@ class BuySellSnapshot extends BaseSnapshot {
         // select color for legacy blocks
         if (ev.contract == "2016") { color = MEH_2016_COLOR }
         if (ev.contract == "2018") { color = MEH_2018_COLOR }
-
-        // wrapped tiles
-        // all tiles purchased after backgoundEventsBlockNumber are considered wrapped
-        // Will not color properly unwrapped blocks
-        const chainId = hre.network.config.chainId
-        const fromBlock = hre.config.dbConf.backgoundEventsBlockNumber[chainId]
-        // see events.js to logic behind 100000 number 
-        if (ev.contract == "2016" && ev.ID > fromBlock * 100000) { color = WRAPPED_BLOCK_COLOR }
+        if (ev.contract == "2024") { color = WRAPPED_BLOCK_COLOR }
 
         // build image
         return await ie.blankImage(width(pxCoords), height(pxCoords), color)

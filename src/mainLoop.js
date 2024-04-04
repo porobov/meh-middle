@@ -1,17 +1,17 @@
 const { MillionEther } = require("./chain.js")
 const hre = require("hardhat");
+const { ethers } = require("hardhat")
 const { WebGateway } = require("./web.js")
 const { ImageEditor } = require("./imageEditor.js")
 const { AdsSnapshot, BuySellSnapshot } = require("./snapshots.js")
 const { logger } = require("./logger.js")
+const wrapperAbi = require('../contracts/wrapper_abi.js');
 const { 
     mixedCoordinatesFilter,
     sellEventFilter,
     newAreaStatus2016mapper,
-    logBuys2018mapper,
-    transfer2018mapper,
     newImage2016mapper,
-    logAds2018mapper 
+    transfer2024wrapper,
 } = require("./events.js")
 // config
 const config = hre.config.dbConf
@@ -20,6 +20,7 @@ const STATUSCODES_ALLOWING_RETRY = config.statusCodesAllowingRetry
 const DEFAULT_BG_PATH = config.default_bg_path
 const NEW_IMAGE_EVENT_NAME = config.newImageEventName
 const BUY_SELL_EVENT_NAME = config.buySellEventName
+const TRANSFER_EVENT_NAME = "Transfer"
 const CHAIN_ID = hre.network.config.chainId 
 const CHAIN_NAME = hre.network.config.chainName
 const ENV_TYPE = config.envType
@@ -80,9 +81,18 @@ from block ${ fromBlock } to ${newEvents.blockNumber}`)
 async function mainLoop(db) {
     let contractName = config.contractName
     let contractAddress = config.contractAddress[CHAIN_ID]
-    let contract = new MillionEther(contractName, contractAddress)
+    let [operatorWallet] = await ethers.getSigners()
     let oldMehContract = new MillionEther(contractName, contractAddress)
+    // TODO no wrapper yet on mainnet - handle it
 
+    let wrapperContract = new MillionEther(
+        "Wrapper",  // not used anywhere
+        config.wrapperAddress[CHAIN_ID],  // not used
+        new ethers.Contract(
+            config.wrapperAddress[CHAIN_ID],
+            wrapperAbi.abi,
+            operatorWallet
+        ))
 
     // SYNC EVENTS
     async function syncEvents(eventName, contract, mapper) {
@@ -97,7 +107,16 @@ async function mainLoop(db) {
     await syncEvents(NEW_IMAGE_EVENT_NAME, oldMehContract, newImage2016mapper)
     // NEWSTATUS (oldMeh)
     await syncEvents(BUY_SELL_EVENT_NAME, oldMehContract, newAreaStatus2016mapper)
-
+    // Transfer (wrapper)
+    // checking if using real wrapper address
+    if (
+        CHAIN_ID == 1 &&
+        config.wrapperAddress[CHAIN_ID] == "0x15dbdB25f870f21eaf9105e68e249E0426DaE916"
+    ) {
+        logger.warn(`On mainnet, but no wrapper yet here`)
+    } else {
+        await syncEvents(TRANSFER_EVENT_NAME, wrapperContract, transfer2024wrapper)
+    }
 
     // PREPARE DATA FOR ADS SNAPSHOT
 

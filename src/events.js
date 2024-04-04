@@ -62,14 +62,28 @@ const logBuys2018mapper = ev => {
     }
 }
 
+const transferFields = (ev) => {
+    return {
+        from: ev.args._from || ev.args.from,
+        to: ev.args._to || ev.args.to,
+        tokenId: (ev.args._tokenId || ev.args.tokenId).toNumber(),
+        event: "Transfer",
+    }
+}
+
 const transfer2018mapper = ev => {
     return {
         ...commonFields(ev),
-        from: ev.args._from,
-        to: ev.args._to,
-        tokenId: ev.args._tokenId.toNumber(),
-        event: "Transfer",
+        ...transferFields(ev),
         contract: "2018"
+    }
+}
+
+const transfer2024wrapper = ev => {
+    return {
+        ...commonFields(ev),
+        ...transferFields(ev),
+        contract: "2024"
     }
 }
 
@@ -127,4 +141,5 @@ module.exports = {
     transfer2018mapper,
     newImage2016mapper,
     logAds2018mapper,
+    transfer2024wrapper,
 }

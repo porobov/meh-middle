@@ -46,6 +46,11 @@ module.exports = {
       "1": "0xCEf41878Db032586C835eE0890484399402A64f6",
       "11155111": "0x2e3b15B8038406008192d8f855bAD3929AD22123",
     },
+    wrapperAddress: {
+      // using fake wrapper for mainnet 
+      "1": "0x15dbdB25f870f21eaf9105e68e249E0426DaE916",
+      "11155111": "0x40C82017a737f4aEe6850923ef2E2bc63af72D55",
+    },
     newImageEventName: "NewImage",
     buySellEventName: "NewAreaStatus",
     imagesBatchSize: 100, // number of ads images downloaded within one cycle
