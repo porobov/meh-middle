@@ -46,7 +46,8 @@ const newAreaStatus2016mapper = ev => {
     return {
         ...commonFields(ev),
         ...coordsFields(ev),
-        price: ev.args.price.toString(), // toString here, because values can be too bog for DB
+        price: ev.args.price.toString(), // toString here, because values can be too big for DB
+        owner: ev.address,  // only owner can emit events (also filtered by sellEventFilter, also overlayed by 2024 transfer)
         event: "NewAreaStatus",
         contract: "2016"
     }
@@ -56,7 +57,7 @@ const logBuys2018mapper = ev => {
     return {
         ...commonFields(ev),
         ...coordsFields(ev),
-        address: ev.args.address,
+        owner: ev.args.address,
         event: "LogBuys",
         contract: "2018"
     }
@@ -66,6 +67,7 @@ const transferFields = (ev) => {
     return {
         from: ev.args._from || ev.args.from,
         to: ev.args._to || ev.args.to,
+        owner: ev.args._to || ev.args.to,  // 2024 overlays 2016 when minting
         tokenId: (ev.args._tokenId || ev.args.tokenId).toNumber(),
         event: "Transfer",
     }

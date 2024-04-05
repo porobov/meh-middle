@@ -194,14 +194,23 @@ class BuySellSnapshot extends BaseSnapshot {
         return await ie.blankImage(width(pxCoords), height(pxCoords), color)
     }
 
+    // note. We need to make it light weight as the whole JSON is transferred to users every time 
     // this fuction accepts Transfer(2018 and wrapper), LogBuys(2018) and NewAreaStatus (2016) events
+    // but we don't need LogBuys(2018) anymore (Transfer events duplicate those)
     _buildJSONMapEntry(buySellTx) {
         return {
-            ...(buySellTx.price !== undefined ? { price: buySellTx.price } : {}),
-            transactionHash: buySellTx.transactionHash,
-            from: buySellTx.from,
-            to: buySellTx.to ? buySellTx.to : buySellTx.address, // address is from LogBuys event
-            contract: buySellTx.contract
+            // if price is present it is always 0 due to sellEventFilter
+            // so we don't need price field here - if contract is 2016, price 
+            // is present and it is always 0)
+            // ...(buySellTx.price !== undefined ? { price: buySellTx.price } : {}),  
+            // from: buySellTx.from, // we could distinguish mint transactions this way, but no need
+            // to: buySellTx.to ? buySellTx.to : buySellTx.address, // address is from LogBuys event 
+            // 2018 overlays all 2016 tiles (all tiles were imported). 
+            // And as we anyway only can "try" to interact with 2016, we can
+            // apply same flow to 2024. But let's try to leave year for now. 
+            // contract: buySellTx.contract,  
+            // transactionHash: buySellTx.transactionHash,  // maybe we will add link to sell transaction
+            owner: buySellTx.owner,
         }
     }
 }
