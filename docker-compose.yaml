@@ -1,0 +1,15 @@
+# template. change path and auth info and run
+# sudo docker compose up --build -d
+version: '3.8'
+services:
+  mongo:
+    container_name: meh-middle-mongo
+    image: mongo:latest
+    restart: always
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=username
+      - MONGO_INITDB_ROOT_PASSWORD=password
+    ports:
+      - 27018:27017
+    volumes:
+      - /home/dir/meh/meh-middle-db:/data/db
