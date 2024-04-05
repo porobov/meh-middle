@@ -49,12 +49,16 @@ function _addToJsonMap(bgJson, coords, entry) {
         for (let x = coords.fromX; x <= coords.toX; x++) {
             for (let y = coords.fromY; y <= coords.toY; y++) {
                 let blockID = _blockID(x, y)
-                parsedMap[blockID] = { ...parsedMap[blockID], ...{x: x}, ...{y: y} , ...entry}
+                // removing x,y as it can be calculated on the front-end
+                // parsedMap[blockID] = { ...parsedMap[blockID], ...{x: x}, ...{y: y} , ...entry}
+                parsedMap[blockID] = { ...parsedMap[blockID], ...entry}
             }
         }
     } else {
-        const xy = _blockXY(coords.tokenId)
-        parsedMap[coords.tokenId] = {...parsedMap[coords.tokenId], ...{x: xy[0]}, ...{y: xy[1]} , ...entry}
+        // const xy = _blockXY(coords.tokenId)
+        // removing x,y as it can be calculated on the front-end
+        // parsedMap[coords.tokenId] = {...parsedMap[coords.tokenId], ...{x: xy[0]}, ...{y: xy[1]} , ...entry}
+        parsedMap[coords.tokenId] = {...parsedMap[coords.tokenId], ...entry}
     }
     
     return JSON.stringify(parsedMap, null, 2)
