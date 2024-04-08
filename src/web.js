@@ -14,6 +14,9 @@ class WebGateway {
   
   async downloadImage(imageUrl) {
     try {
+      // Dealing with imgur rate limiting. Setting timeput in milliseconds
+      await new Promise(resolve => setTimeout(resolve, 500));
+
       let response = await axios.get(imageUrl, { responseType: 'arraybuffer' });
       const buffer = Buffer.from(response.data, 'binary');
       const imageFormat = await (await import("image-type")).default(buffer)
