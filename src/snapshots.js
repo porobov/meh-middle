@@ -210,9 +210,9 @@ class BuySellSnapshot extends BaseSnapshot {
             // from: buySellTx.from, // we could distinguish mint transactions this way, but no need
             // to: buySellTx.to ? buySellTx.to : buySellTx.address, // address is from LogBuys event 
             // 2018 overlays all 2016 tiles (all tiles were imported). 
-            // And as we anyway only can "try" to interact with 2016, we can
-            // apply same flow to 2024. But let's try to leave year for now. 
-            // contract: buySellTx.contract,  
+            // Unwrapped tiles will show 2016
+            // Need contract year for mintReserved function and to select contract for placeAds function
+            contract: buySellTx.contract,
             // transactionHash: buySellTx.transactionHash,  // maybe we will add link to sell transaction
             owner: buySellTx.owner,
         }
