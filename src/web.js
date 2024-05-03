@@ -1,5 +1,4 @@
 const fs = require('fs')  
-const Path = require('path')  
 const axios = require('axios')
 const { logger } = require("./logger.js")
 const ufs = require("url-file-size")
@@ -12,21 +11,37 @@ class WebGateway {
     this.SUPPORTED_FORMATS = conf.supportedFormats
   }
   
+  getBinaryFromSvg(svgData) {
+    // TODO may not find the image - try catch
+    const regex = /xlink:href="data:image\/svg\+xml;base64,(.*)"/;
+    const base64Data = svgData.match(regex)[1];
+    return Buffer.from(base64Data, 'base64');
+  }
+
   async downloadImage(imageUrl) {
     try {
       // Dealing with imgur rate limiting. Setting timeput in milliseconds
       await new Promise(resolve => setTimeout(resolve, 1000));
 
       let response = await axios.get(imageUrl, { responseType: 'arraybuffer' });
-      const buffer = Buffer.from(response.data, 'binary');
-      const imageFormat = await (await import("image-type")).default(buffer)
-      if (!this.SUPPORTED_FORMATS.includes(imageFormat.ext)) {
-        throw new Error ('Image format is not supported') 
+
+      let binary, extension;
+      if (response.headers['content-type'] === 'image/svg+xml') {
+        binary = this.getBinaryFromSvg(response.data.toString())
+        extension = 'svg'
+      } else {
+        binary = Buffer.from(response.data, 'binary');
+        const imageFormat = await (await import("image-type")).default(binary)
+        if (!this.SUPPORTED_FORMATS.includes(imageFormat.ext)) {
+          throw new Error('Image format is not supported')
+        }
+        extension = imageFormat.ext
       }
+
       return [
         {
-          binary: buffer,
-          extension: imageFormat.ext
+          binary: binary,
+          extension: extension 
         },
         null
       ]
