@@ -16,6 +16,20 @@ const consoleTransport = new winston.transports.Console({
         format: winston.format.cli()
       })
 
+// Create a single instance of TelegramLogger
+const telegramTransport = new TelegramLogger({
+  level: 'error',
+  token: process.env.BOT_TOKEN || '',
+  chatId: process.env.CHAT_ID || '',
+  format: combine(errorFilter(), timestamp(), json()),
+  handleExceptions: true,
+  handleRejections: true,
+  batchingDelay: 1000,
+  batchingInterval: 1000,
+  maxBatchSize: 10,
+  unique: true, // Ensure only one instance is created
+  silent: !process.env.BOT_TOKEN || !process.env.CHAT_ID // Disable if credentials are missing
+})
 
 const logger = winston.createLogger({
     level: process.env.LOG_LEVEL || 'debug',
@@ -26,7 +40,7 @@ const logger = winston.createLogger({
         filename: 'logs/combined-%DATE%.log',
         datePattern: 'YYYY-MM-DD-HH',
         maxSize: '20m',
-        maxFiles: '14d',
+        maxFiles: '1d',
       }),
       new DailyRotateFile({
         filename: 'logs/app-error-%DATE%.log',
@@ -34,7 +48,7 @@ const logger = winston.createLogger({
         format: combine(errorFilter(), timestamp(), json()),
         datePattern: 'YYYY-MM-DD-HH',
         maxSize: '20m',
-        maxFiles: '14d',
+        maxFiles: '1d',
       }),
       new DailyRotateFile({
         filename: 'logs/app-info-%DATE%.log',
@@ -42,23 +56,18 @@ const logger = winston.createLogger({
         format: combine(infoFilter(), timestamp(), json()),
         datePattern: 'YYYY-MM-DD-HH',
         maxSize: '20m',
-        maxFiles: '14d',
+        maxFiles: '1d',
       }),
-      new TelegramLogger({
-        level: 'error',
-        token: process.env.BOT_TOKEN !== undefined ? process.env.BOT_TOKEN : "",
-        chatId: process.env.CHAT_ID !== undefined ? process.env.CHAT_ID : "",
-        format: combine(errorFilter(), timestamp(), json()),
-      }),
+      telegramTransport
     ],
-    // exceptionHandlers: [
-    //   new winston.transports.File({ filename: 'logs/exception.log' }),
-    //   consoleTransport,
-    // ],
-    // rejectionHandlers: [
-    //   new winston.transports.File({ filename: 'logs/rejections.log' }),
-    //   consoleTransport,
-    // ],
+    exceptionHandlers: [
+      new winston.transports.File({ filename: 'logs/exception.log' }),
+      consoleTransport,
+    ],
+    rejectionHandlers: [
+      new winston.transports.File({ filename: 'logs/rejections.log' }),
+      consoleTransport,
+    ],
   })
 
   module.exports = {
