@@ -13,3 +13,8 @@ services:
       - 27018:27017
     volumes:
       - /home/dir/meh/meh-middle-db:/data/db
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
