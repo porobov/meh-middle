@@ -12,15 +12,14 @@ const {
     newAreaStatus2016mapper,
     newImage2016mapper,
     transfer2024wrapper,
+    transfer2018mapper,
+    logAds2018mapper,
 } = require("./events.js")
 // config
 const config = hre.config.dbConf
 const MAX_NUM_OF_DOWNLOAD_ATTEMPTS = config.maxNumOfDownloadAttempts
 const STATUSCODES_ALLOWING_RETRY = config.statusCodesAllowingRetry
 const DEFAULT_BG_PATH = config.default_bg_path
-const NEW_IMAGE_EVENT_NAME = config.newImageEventName
-const BUY_SELL_EVENT_NAME = config.buySellEventName
-const TRANSFER_EVENT_NAME = "Transfer"
 const CHAIN_ID = hre.network.config.chainId 
 const CHAIN_NAME = hre.network.config.chainName
 const ENV_TYPE = config.envType
@@ -69,7 +68,8 @@ from block ${ fromBlock } to ${newEvents.blockNumber}`)
         }
 
         if (formatedEvents.length == insertsCount) {
-            if (toBlock > 0) { // sometimes alchemy will send error on event fetch (it's ok). toBlock is then null. 
+            // We may encountere error on event fetch (it's ok). toBlock is then null. 
+            if (toBlock > 0) { 
                 let saved = await db.saveLatestBlockForEvent(eventName, toBlock)
                 logger.debug(`${ saved ? "Saved" : "FAILED TO SAVE" } block ${toBlock} for ${eventName} event to db`)
             }
@@ -78,11 +78,33 @@ from block ${ fromBlock } to ${newEvents.blockNumber}`)
         }
     }
 
+// SYNC EVENTS
+// If stopAtBlock is provided, will stop at that block
+async function syncEvents(eventName, contract, mapper, db, stopAtBlock = Number.MAX_SAFE_INTEGER) {
+    let fromBlock = await db.getLatestBlockForEvent(eventName)
+    if ( fromBlock == null || fromBlock == stopAtBlock ) { return null }
+    // dealing with alchemy limit on number of blocks to query at once
+    let toQueryBlock = await ethers.provider.getBlockNumber()
+    if ( toQueryBlock - fromBlock >= config.maxBlocksRetrieved) {
+        toQueryBlock = fromBlock + config.maxBlocksRetrieved
+    }
+    if ( toQueryBlock > stopAtBlock ) {
+        toQueryBlock = stopAtBlock
+    }
+    // using fromBlock + 1 to make sure no overlap happens
+    const [formatedEvents, toBlock] = await getFormatedEvents(eventName, contract, mapper, fromBlock + 1, toQueryBlock)
+    if ( formatedEvents == null ) { return null }
+    await saveEventsToDB(toBlock, eventName, formatedEvents, db)
+    return toBlock
+}
+
 async function mainLoop(db) {
+
     let contractName = config.contractName
     let contractAddress = config.contractAddress[CHAIN_ID]
     let [operatorWallet] = await ethers.getSigners()
     let oldMehContract = new MillionEther(contractName, contractAddress)
+    const signer = (await hre.ethers.getSigners())[0]
     // TODO no wrapper yet on mainnet - handle it
 
     let wrapperContract = new MillionEther(
@@ -94,19 +116,22 @@ async function mainLoop(db) {
             operatorWallet
         ))
 
-    // SYNC EVENTS
-    async function syncEvents(eventName, contract, mapper) {
-        let fromBlock = await db.getLatestBlockForEvent(eventName)
-        if ( fromBlock == null ) { return null }
-        // using fromBlock + 1 to make sure no overlap happens
-        const [formatedEvents, toBlock] = await getFormatedEvents(eventName, contract, mapper, fromBlock + 1)
-        if ( formatedEvents == null ) { return null }
-        await saveEventsToDB(toBlock, eventName, formatedEvents, db)
-    }
+    let meh2018 = new MillionEther(
+        contractName,
+        config.meh2018AddressMain[CHAIN_ID],
+        new ethers.Contract(
+            config.meh2018AddressMain[CHAIN_ID],
+            config.meh2018Abi,
+            signer))
+    
+    const stopAtBlock = config.backgoundEventsBlockNumber[CHAIN_ID]
+    await syncEvents(config.transferEventName, meh2018, transfer2018mapper, db, stopAtBlock)
+    await syncEvents(config.logAdsEventName, meh2018, logAds2018mapper, db, stopAtBlock)
+
     // NEWIMAGES (oldMeh)
-    await syncEvents(NEW_IMAGE_EVENT_NAME, oldMehContract, newImage2016mapper)
+    await syncEvents(config.newImageEventName, oldMehContract, newImage2016mapper, db)
     // NEWSTATUS (oldMeh)
-    await syncEvents(BUY_SELL_EVENT_NAME, oldMehContract, newAreaStatus2016mapper)
+    await syncEvents(config.buySellEventName, oldMehContract, newAreaStatus2016mapper, db)
     // Transfer (wrapper)
     // checking if using real wrapper address
     if (
@@ -115,7 +140,7 @@ async function mainLoop(db) {
     ) {
         logger.warn(`On mainnet, but no wrapper yet here`)
     } else {
-        await syncEvents(TRANSFER_EVENT_NAME, wrapperContract, transfer2024wrapper)
+        await syncEvents(config.transferEventName, wrapperContract, transfer2024wrapper, db)
     }
 
     // PREPARE DATA FOR ADS SNAPSHOT
@@ -293,8 +318,8 @@ async function mainLoop(db) {
         const siteData = {
             adsSnapshot: await db.getAdsSnapshotBeforeID('infinity'),
             buySellSnapshot: await db.getLatestBuySellSnapshot(),
-            newImageLatestCheckedBlock: await db.getLatestBlockForEvent(NEW_IMAGE_EVENT_NAME),
-            buySellLatestCheckedBlock: await db.getLatestBlockForEvent(BUY_SELL_EVENT_NAME),
+            newImageLatestCheckedBlock: await db.getLatestBlockForEvent(config.newImageEventName),
+            buySellLatestCheckedBlock: await db.getLatestBlockForEvent(config.buySellEventName),
             mehContractAddress: contractAddress,
             chainID: CHAIN_ID,
             envType: ENV_TYPE,
@@ -329,5 +354,6 @@ BuySell: ${siteData.buySellLatestCheckedBlock} ==`)
 module.exports = {
     getFormatedEvents,
     saveEventsToDB,
-    mainLoop
+    mainLoop,
+    syncEvents
   }

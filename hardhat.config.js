@@ -51,8 +51,14 @@ module.exports = {
       "1": "0x15dbdB25f870f21eaf9105e68e249E0426DaE916",
       "11155111": "0x40C82017a737f4aEe6850923ef2E2bc63af72D55",
     },
-    newImageEventName: "NewImage",
-    buySellEventName: "NewAreaStatus",
+    // event names
+    newImageEventName: "NewImage",  // 2016 contract
+    buySellEventName: "NewAreaStatus",  // 2016 contract
+    logAdsEventName: "LogAds",  // 2018 contract
+    logBuysEventName: "LogBuys",  // 2018 contract
+    transferEventName: "Transfer",  // 2018 contract, wrapper contract
+    maxBlocksRetrieved: 500, // max number of blocks to retrieve at once from alchemy
+    // image downloader params
     imagesBatchSize: 100, // number of ads images downloaded within one cycle
     maxEventsPerSnapshot: 10,  // number of events retrieved per run per snapshot (small values used for testing)
     maxStoredSnapshots: 2, // if more are present in db the earliest will be deleted

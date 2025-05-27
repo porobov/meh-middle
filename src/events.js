@@ -1,3 +1,6 @@
+const hre = require("hardhat");
+const config = hre.config.dbConf
+
 // fixing smart contract bug. Coordinates may be mixed up
 // ignoring mixed coordinates everywhere
 const mixedCoordinatesFilter = ev => {
@@ -48,7 +51,7 @@ const newAreaStatus2016mapper = ev => {
         ...coordsFields(ev),
         price: ev.args.price.toString(), // toString here, because values can be too big for DB
         owner: ev.address,  // only owner can emit events (also filtered by sellEventFilter, also overlayed by 2024 transfer)
-        event: "NewAreaStatus",
+        event: config.buySellEventName,
         contract: "2016"
     }
 }
@@ -58,7 +61,7 @@ const logBuys2018mapper = ev => {
         ...commonFields(ev),
         ...coordsFields(ev),
         owner: ev.args.address,
-        event: "LogBuys",
+        event: config.logBuysEventName,
         contract: "2018"
     }
 }
@@ -69,7 +72,7 @@ const transferFields = (ev) => {
         to: ev.args._to || ev.args.to,
         owner: ev.args._to || ev.args.to,  // 2024 overlays 2016 when minting
         tokenId: (ev.args._tokenId || ev.args.tokenId).toNumber(),
-        event: "Transfer",
+        event: config.transferEventName,
     }
 }
 
@@ -118,7 +121,7 @@ const newImage2016mapper = ev => {
         ...coordsFields(ev),
         ...adParamsFields(ev), 
         ...adDownloadFields(),
-        event: "NewImage",
+        event: config.newImageEventName,
         contract: "2016"
     }
 }
@@ -130,7 +133,7 @@ const logAds2018mapper = ev => {
         ...adParamsFields(ev), 
         ...adDownloadFields(),
         advertiser: ev.args.advertiser,
-        event: "LogAds",
+        event: config.logAdsEventName,
         contract: "2018"
     }
 }

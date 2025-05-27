@@ -36,11 +36,11 @@ class DB {
       // record id for current state
       this.tempStateId = this.conf.stateRecordName
       this.eventNameToCollection = {
-        "LogAds": this.ads,  // 2018 contract
+        [this.conf.logAdsEventName]: this.ads,  // 2018 contract
         [this.conf.newImageEventName]: this.ads,  // 2016
         [this.conf.buySellEventName]: this.buySells, // 2016
-        "LogBuys": this.buySells, // 2018
-        "Transfer": this.buySells, // 2018
+        [this.conf.logBuysEventName]: this.buySells, // 2018
+        [this.conf.transferEventName]: this.buySells, // 2018
         // TODO add wrapper here
       }
       return true
@@ -93,6 +93,8 @@ class DB {
       "state_id": this.tempStateId,
       [this.recordNameForEvent(this.conf.newImageEventName)]: 0,
       [this.recordNameForEvent(this.conf.buySellEventName)]: 0,
+      [this.recordNameForEvent(this.conf.transferEventName)]: 0,
+      [this.recordNameForEvent(this.conf.logAdsEventName)]: 0,
     }
     const p = await this.state.insertOne(emptyStateRecord)
   }
