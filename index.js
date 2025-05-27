@@ -29,10 +29,10 @@ async function main() {
 
     // params check
     if (
-        (hre.network.config.chainName == "goerli" || hre.network.config.chainName == "localhost") 
+        (hre.network.config.chainName == "testnet" || hre.network.config.chainName == "localhost") 
         && config.envType == "production"
     ) {
-        logger.error("Wrong config. Goerli can only go with preview env type")
+        logger.error("Wrong config. Testnet can only go with preview env type")
     }
 
     async function interval() {
