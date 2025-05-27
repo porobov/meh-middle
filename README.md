@@ -1,14 +1,12 @@
 # Million ether homepage middleware
 
 ## Create DB:
-**Run Mongo locally**
-`docker run --name some-mongo -v ./db-data:/data/db -d -p 27017:27017 mongo:latest`
-
-**Run Mongo on server**
+**Run Mongo**
 See docker-compose.yaml example in root dir. Credentials in secrets (mongo for meh)
 `sudo docker compose up --build -d`
 
-**Create db**
+**Create db if starting new**
+Will delete current DB
 `npx hardhat run scripts/createDbCollections.js --network readMain`
 
 ## Run

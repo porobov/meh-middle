@@ -7,12 +7,12 @@ services:
     image: mongo:latest
     restart: always
     environment:
-      - MONGO_INITDB_ROOT_USERNAME=username
-      - MONGO_INITDB_ROOT_PASSWORD=password
+      - MONGO_INITDB_ROOT_USERNAME=${MONGO_INITDB_ROOT_USERNAME}
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_INITDB_ROOT_PASSWORD}
     ports:
       - 27018:27017
     volumes:
-      - /home/dir/meh/meh-middle-db:/data/db
+      - ./db-data:/data/db
     logging:
       driver: json-file
       options:
