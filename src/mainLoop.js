@@ -71,16 +71,11 @@ function constructRetryParams(error, numOfTries) {
             insertsCount = await db.addEvents(formatedEvents, eventName)
             logger.info(`${ insertsCount } new ${ eventName } events were written to db`)
         }
-
-        if (formatedEvents.length == insertsCount) {
-            // We may encountere error on event fetch (it's ok). toBlock is then null. 
-            if (toBlock > 0) { 
-                let saved = await db.saveLatestBlockForEvent(eventName, toBlock)
-                logger.debug(`${ saved ? "Saved" : "FAILED TO SAVE" } block ${toBlock} for ${eventName} event to db`)
-            }
-        } else {
+        if (formatedEvents.length != insertsCount) {
             logger.error(`Retrieved from chain and saved ${eventName} events mismatch`)
         }
+        let saved = await db.saveLatestBlockForEvent(eventName, toBlock)
+        logger.debug(`${saved ? "Saved" : "FAILED TO SAVE"} block ${toBlock} for ${eventName} event to db`)
     }
 
 // SYNC EVENTS
