@@ -187,6 +187,7 @@ class DB {
   // SAVING EVENTS
 
   // will put events into db
+  // Will discard duplicates, but still perform unique insert operation
   async addEvents(decodedEvents, eventName) {
     const collection = this.getCollectionForEvent(eventName)
     const [res, err] = await withErrorHandling(
