@@ -129,15 +129,7 @@ async function mainLoop(db) {
     // NEWSTATUS (oldMeh)
     await syncEvents(config.buySellEventName, oldMehContract, newAreaStatus2016mapper, db)
     // Transfer (wrapper)
-    // checking if using real wrapper address
-    if (
-        CHAIN_ID == 1 &&
-        config.wrapperAddress[CHAIN_ID] == "0x15dbdB25f870f21eaf9105e68e249E0426DaE916"
-    ) {
-        logger.warn(`On mainnet, but no wrapper yet here`)
-    } else {
-        await syncEvents(config.transferEventName, wrapperContract, transfer2024wrapper, db)
-    }
+    await syncEvents(config.transferEventName, wrapperContract, transfer2024wrapper, db)
 
     // PREPARE DATA FOR ADS SNAPSHOT
 
