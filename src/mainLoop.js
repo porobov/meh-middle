@@ -50,12 +50,17 @@ function constructRetryParams(error, numOfTries) {
     async function getFormatedEvents(eventName, contract, mapper, fromBlock, toBlock) {
         // alchemy returns error when fromBlock cannot be found (different nodes got different block height)
         const newEvents = await contract.getEvents(eventName, fromBlock, toBlock)
-        if ( newEvents == null ) { return [[], null] }
+        if ( newEvents == null ) { return [[], null] } // can return -32000 when the specified fromBlock/toBlock isn’t available yet or due to node lag/reorgs.
         const formatedEvents = newEvents.decodedEvents.filter(mixedCoordinatesFilter).filter(sellEventFilter).map(mapper)
+        // logging
+        const group = x => x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ','); // "5,477,473" [4][8]
+        const slug36 = x => (typeof x === 'bigint' ? x : BigInt(x)).toString(36); // e.g., "3q8vx" [9]
         logger.debug(
-`Received ${formatedEvents.length} \
-new ${ eventName } events \
-from block ${ fromBlock } to ${newEvents.blockNumber}`)
+            `Received ${formatedEvents.length} `
+            + `new ${eventName} events `
+            + `from block ${group(fromBlock)} (${slug36(fromBlock)}) `
+            + `to ${group(newEvents.blockNumber)} (${slug36(newEvents.blockNumber)})`
+        );
         return [formatedEvents, newEvents.blockNumber]
     }
 
@@ -79,7 +84,8 @@ from block ${ fromBlock } to ${newEvents.blockNumber}`)
     }
 
 // SYNC EVENTS
-// If stopAtBlock is provided, will stop at that block
+// If stopAtBlock is provided, will stop at that block (needed for legacy
+// contracts)
 async function syncEvents(eventName, contract, mapper, db, stopAtBlock = Number.MAX_SAFE_INTEGER) {
     let fromBlock = await db.getLatestBlockForEvent(eventName)
     if ( fromBlock == null || fromBlock == stopAtBlock ) { return null }
@@ -88,14 +94,10 @@ async function syncEvents(eventName, contract, mapper, db, stopAtBlock = Number.
     if ( toQueryBlock - fromBlock >= config.maxBlocksRetrieved) {
         toQueryBlock = fromBlock + config.maxBlocksRetrieved
     }
-    if ( toQueryBlock > stopAtBlock ) {
-        toQueryBlock = stopAtBlock
-    }
     // using fromBlock + 1 to make sure no overlap happens
     const [formatedEvents, toBlock] = await getFormatedEvents(eventName, contract, mapper, fromBlock + 1, toQueryBlock)
-    if ( formatedEvents == null ) { return null }
+    if ( toBlock == null ) { return null } // do not save events if error occured
     await saveEventsToDB(toBlock, eventName, formatedEvents, db)
-    return toBlock
 }
 
 async function mainLoop(db) {
