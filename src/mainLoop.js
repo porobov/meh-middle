@@ -23,6 +23,8 @@ const DEFAULT_BG_PATH = config.default_bg_path
 const CHAIN_ID = hre.network.config.chainId 
 const CHAIN_NAME = hre.network.config.chainName
 const ENV_TYPE = config.envType
+const group = x => x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ','); // "5,477,473" [4][8]
+const slug36 = x => (typeof x === 'bigint' ? x : BigInt(x)).toString(36); // e.g., "3q8vx" [9]
 
 // analyzes error of image download
 function constructRetryParams(error, numOfTries) {
@@ -52,9 +54,6 @@ function constructRetryParams(error, numOfTries) {
         const newEvents = await contract.getEvents(eventName, fromBlock, toBlock)
         if ( newEvents == null ) { return [[], null] } // can return -32000 when the specified fromBlock/toBlock isn’t available yet or due to node lag/reorgs.
         const formatedEvents = newEvents.decodedEvents.filter(mixedCoordinatesFilter).filter(sellEventFilter).map(mapper)
-        // logging
-        const group = x => x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ','); // "5,477,473" [4][8]
-        const slug36 = x => (typeof x === 'bigint' ? x : BigInt(x)).toString(36); // e.g., "3q8vx" [9]
         logger.debug(
             `Received ${formatedEvents.length} `
             + `new ${eventName} events `
@@ -75,7 +74,7 @@ function constructRetryParams(error, numOfTries) {
             logger.error(`Retrieved from chain and saved ${eventName} events mismatch`)
         }
         let saved = await db.saveLatestBlockForEvent(eventName, toBlock)
-        logger.debug(`${saved ? "Saved" : "FAILED TO SAVE"} block ${toBlock} for ${eventName} event to db`)
+        logger.debug(`${saved ? "Saved" : "FAILED TO SAVE"} block ${group(toBlock)} (${slug36(toBlock)}) for ${eventName} event to db`)
     }
 
 // SYNC EVENTS
@@ -83,7 +82,7 @@ function constructRetryParams(error, numOfTries) {
 // contracts)
 async function syncEvents(eventName, contract, mapper, db, stopAtBlock = Number.MAX_SAFE_INTEGER) {
     let fromBlock = await db.getLatestBlockForEvent(eventName)
-    if ( fromBlock == null || fromBlock == stopAtBlock ) { return null }
+    if ( fromBlock == null || fromBlock >= stopAtBlock ) { return null }
     // dealing with alchemy limit on number of blocks to query at once
     let toQueryBlock = await ethers.provider.getBlockNumber()
     if ( toQueryBlock - fromBlock >= config.maxBlocksRetrieved) {
