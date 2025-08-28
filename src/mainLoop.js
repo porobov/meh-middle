@@ -325,7 +325,8 @@ async function mainLoop(db) {
             // for ENV_TYPE see .env file
             const keyName = CHAIN_NAME + "-" + ENV_TYPE
             const isServing = await wg.publish(siteData, keyName)
-            const cfUrl = "https://muddy-truth-5b42.porobov-p3798.workers.dev/?myKey="
+            // worker url
+            const cfUrl = "https://kv-value-retriever.themillionetherhomepage.com/?myKey="
             if (isServing) {
                 logger.info(`== Publised to ${cfUrl + keyName}. Latest blocks \
 NewImage: ${siteData.newImageLatestCheckedBlock}, \
