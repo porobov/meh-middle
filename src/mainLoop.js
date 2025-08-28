@@ -81,15 +81,15 @@ function constructRetryParams(error, numOfTries) {
 // If stopAtBlock is provided, will stop at that block (needed for legacy
 // contracts)
 async function syncEvents(eventName, contract, mapper, db, stopAtBlock = Number.MAX_SAFE_INTEGER) {
-    let fromBlock = await db.getLatestBlockForEvent(eventName)
+    let fromBlock = await db.getLatestBlockForEvent(eventName) + 1
     if ( fromBlock == null || fromBlock >= stopAtBlock ) { return null }
     // dealing with alchemy limit on number of blocks to query at once
     let toQueryBlock = await ethers.provider.getBlockNumber()
+    if (fromBlock > toQueryBlock) { return null }
     if ( toQueryBlock - fromBlock >= config.maxBlocksRetrieved) {
         toQueryBlock = fromBlock + config.maxBlocksRetrieved
     }
-    // using fromBlock + 1 to make sure no overlap happens
-    const [formatedEvents, toBlock] = await getFormatedEvents(eventName, contract, mapper, fromBlock + 1, toQueryBlock)
+    const [formatedEvents, toBlock] = await getFormatedEvents(eventName, contract, mapper, fromBlock, toQueryBlock)
     if ( toBlock == null ) { return null } // do not save events if error occured
     await saveEventsToDB(toBlock, eventName, formatedEvents, db)
 }
