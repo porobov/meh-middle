@@ -1,2 +1,2 @@
 #!/bin/bash
-node index.js --network testnet
+node index.js --network=testnet

@@ -1,2 +1,2 @@
 #!/bin/bash
-node index.js --network mainnet
+node index.js --network=mainnet
