@@ -5,6 +5,7 @@ const { AdsSnapshot, BuySellSnapshot } = require("./snapshots.js")
 const { logger } = require("./logger.js")
 const wrapperAbi = require('../contracts/wrapper_abi.js')
 const oldMehAbi = require('../contracts/oldMeh_abi.js')
+const meh2018Abi = require('../contracts/meh2018_abi.js')
 const { 
     mixedCoordinatesFilter,
     sellEventFilter,
@@ -109,7 +110,7 @@ async function mainLoop(db) {
     )
     let meh2018 = new MillionEther(
         config.meh2018AddressMain[chainId],
-        config.meh2018Abi,
+        meh2018Abi.abi,
         chainName
     )
     
