@@ -1,11 +1,10 @@
 const { MillionEther } = require("./chain.js")
-const hre = require("hardhat");
-const { ethers } = require("hardhat")
 const { WebGateway } = require("./web.js")
 const { ImageEditor } = require("./imageEditor.js")
 const { AdsSnapshot, BuySellSnapshot } = require("./snapshots.js")
 const { logger } = require("./logger.js")
-const wrapperAbi = require('../contracts/wrapper_abi.js');
+const wrapperAbi = require('../contracts/wrapper_abi.js')
+const oldMehAbi = require('../contracts/oldMeh_abi.js')
 const { 
     mixedCoordinatesFilter,
     sellEventFilter,
@@ -16,12 +15,13 @@ const {
     logAds2018mapper,
 } = require("./events.js")
 // config
-const config = hre.config.dbConf
+const { dbConf } = require("../hardhat.config.js")
+const { networks } = require("../hardhat.config.js")
+
+const config = dbConf
 const MAX_NUM_OF_DOWNLOAD_ATTEMPTS = config.maxNumOfDownloadAttempts
 const STATUSCODES_ALLOWING_RETRY = config.statusCodesAllowingRetry
 const DEFAULT_BG_PATH = config.default_bg_path
-const CHAIN_ID = hre.network.config.chainId 
-const CHAIN_NAME = hre.network.config.chainName
 const ENV_TYPE = config.envType
 const group = x => x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ','); // "5,477,473" [4][8]
 const slug36 = x => (typeof x === 'bigint' ? x : BigInt(x)).toString(36); // e.g., "3q8vx" [9]
@@ -84,7 +84,7 @@ async function syncEvents(eventName, contract, mapper, db, stopAtBlock = Number.
     let fromBlock = await db.getLatestBlockForEvent(eventName) + 1
     if ( fromBlock == null || fromBlock >= stopAtBlock ) { return null }
     // dealing with alchemy limit on number of blocks to query at once
-    let toQueryBlock = await ethers.provider.getBlockNumber()
+    let toQueryBlock = await contract.provider.getBlockNumber()
     if (fromBlock > toQueryBlock) { return null }
     if ( toQueryBlock - fromBlock >= config.maxBlocksRetrieved) {
         toQueryBlock = fromBlock + config.maxBlocksRetrieved
@@ -95,32 +95,25 @@ async function syncEvents(eventName, contract, mapper, db, stopAtBlock = Number.
 }
 
 async function mainLoop(db) {
-
-    let contractName = config.contractName
-    let contractAddress = config.contractAddress[CHAIN_ID]
-    let [operatorWallet] = await ethers.getSigners()
-    let oldMehContract = new MillionEther(contractName, contractAddress)
-    const signer = (await hre.ethers.getSigners())[0]
-    // TODO no wrapper yet on mainnet - handle it
-
+    const chainName = db.chainName
+    const chainId = networks[chainName].chainId
+    let oldMehContract = new MillionEther(
+        config.contractAddress[chainId],
+        oldMehAbi.abi,
+        chainName
+    )
     let wrapperContract = new MillionEther(
-        "Wrapper",  // not used anywhere
-        config.wrapperAddress[CHAIN_ID],  // not used
-        new ethers.Contract(
-            config.wrapperAddress[CHAIN_ID],
-            wrapperAbi.abi,
-            operatorWallet
-        ))
-
+        config.wrapperAddress[chainId],
+        wrapperAbi.abi,
+        chainName
+    )
     let meh2018 = new MillionEther(
-        contractName,
-        config.meh2018AddressMain[CHAIN_ID],
-        new ethers.Contract(
-            config.meh2018AddressMain[CHAIN_ID],
-            config.meh2018Abi,
-            signer))
+        config.meh2018AddressMain[chainId],
+        config.meh2018Abi,
+        chainName
+    )
     
-    const stopAtBlock = config.backgoundEventsBlockNumber[CHAIN_ID]
+    const stopAtBlock = config.backgoundEventsBlockNumber[chainId]
     await syncEvents(config.transferEventName, meh2018, transfer2018mapper, db, stopAtBlock)
     await syncEvents(config.logAdsEventName, meh2018, logAds2018mapper, db, stopAtBlock)
 
@@ -309,7 +302,7 @@ async function mainLoop(db) {
             newImageLatestCheckedBlock: await db.getLatestBlockForEvent(config.newImageEventName),
             buySellLatestCheckedBlock: await db.getLatestBlockForEvent(config.buySellEventName),
             mehContractAddress: contractAddress,
-            chainID: CHAIN_ID,
+            chainID: chainId,
             envType: ENV_TYPE,
             middleWareID: config.middleWareID,
             timestamp: Date.now()
@@ -323,7 +316,7 @@ async function mainLoop(db) {
         ) {
             // for CHAIN_NAME see chainName in hardhat.config.js
             // for ENV_TYPE see .env file
-            const keyName = CHAIN_NAME + "-" + ENV_TYPE
+            const keyName = chainName + "-" + ENV_TYPE
             const isServing = await wg.publish(siteData, keyName)
             // worker url
             const cfUrl = "https://kv-value-retriever.themillionetherhomepage.com/?myKey="

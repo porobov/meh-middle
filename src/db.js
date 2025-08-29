@@ -1,6 +1,5 @@
 const { MongoClient } = require("mongodb")
 const { ImageEditor } = require("./imageEditor.js")
-const chalk = require("chalk")
 const { logger } = require("./logger.js")
 
 const MODULE_NAME = "db"
@@ -18,15 +17,16 @@ const withErrorHandling = async (fn, fnName) => {
 
 class DB {
 
-  constructor(conf) {
+  constructor(conf, chainName="") {
     this.client = new MongoClient(conf.dbAccessUrl)
     this.conf = conf
+    this.chainName = chainName
   }
 
   async connect() {
     const [res, err] = await withErrorHandling(async () => await this.client.connect(), "connect")
     if (this.client && this.client.topology && this.client.topology.isConnected()) {
-      this.db = this.client.db(hre.network.config.chainName)
+      this.db = this.client.db(this.chainName)
       // initialize collections
       this.state = this.db.collection("state")
       this.ads = this.db.collection("ads")

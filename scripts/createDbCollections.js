@@ -2,10 +2,10 @@
 // npx hardhat run scripts/createDbCollections.js --network readMain
 
 const { DB } = require("../src/db.js")
-const hre = require("hardhat");
+const { dbConf } = require("../hardhat.config.js")
 
 let db = null
-const config = hre.config.dbConf
+const config = dbConf
 try {
   db = new DB(config)
 } catch(e) {

@@ -1,5 +1,5 @@
-const hre = require("hardhat");
-const config = hre.config.dbConf
+const { dbConf } = require("../hardhat.config.js")
+const config = dbConf
 
 // fixing smart contract bug. Coordinates may be mixed up
 // ignoring mixed coordinates everywhere

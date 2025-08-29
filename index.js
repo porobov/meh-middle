@@ -1,14 +1,35 @@
+require("dotenv").config();
 const { DB } = require("./src/db.js")
-const hre = require("hardhat")
 const { logger } = require("./src/logger.js")
 const { mainLoop } = require("./src/mainLoop.js")
+const { networks } = require("./hardhat.config.js")
+const { dbConf } = require("./hardhat.config.js")
+
+
+// get chainName from network
+const args = process.argv.slice(2)
+const networkArg = args.find(arg => arg.startsWith('--network='))
+const network = networkArg ? networkArg.split('=')[1] : null
+
+if (network) {
+    if (networks[network]) {
+        logger.info(`Network specified: ${network}`)
+    } else {
+        logger.error(`Network ${network} not found in hardhat.config.js`)
+        process.exit(1)
+    }
+} else {
+    logger.error("Network not specified")
+    process.exit(1)
+}
+const chainName = networks[network].chainName
 
 // config
-const config = hre.config.dbConf
+const config = dbConf
 const MAIN_LOOP_INTERVAL_MS = config.mainLoopIntervalMs
 const MODULE_NAME = 'index'
 
-let db = new DB(config)
+let db = new DB(config, chainName)
 
 let cancelNextCycle = false
 let isExecuting = false
@@ -29,7 +50,7 @@ async function main() {
 
     // params check
     if (
-        (hre.network.config.chainName == "testnet" || hre.network.config.chainName == "localhost") 
+        (chainName == "testnet" || chainName == "localhost") 
         && config.envType == "production"
     ) {
         logger.error("Wrong config. Testnet can only go with preview env type")

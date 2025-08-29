@@ -1,25 +1,25 @@
-const { ethers } = require("hardhat")
+// pure ethers
+const { ethers } = require("ethers")
 const { logger } = require("./logger.js")
+const { networks } = require("../hardhat.config.js")
 
 const MODULE_NAME = "chain"
 class MillionEther {
-  constructor(contractName, contractAddress, contractInstance = null){
-    this.contractAddress = contractAddress
-    this.contractName = contractName
-    this.contractInstance = contractInstance
+  constructor(contractAddress, contractAbi, chainName){
+    this.provider = new ethers.providers.JsonRpcProvider(networks[chainName].url)
+    const signer = this.provider.getSigner()
+    this.contract = new ethers.Contract(
+        contractAddress,
+        contractAbi,
+        signer
+      )
   }
 
   async getEvents(eventName, fromBlock, toBlock = "latest") {
     try {
-      let contract
-      if (this.contractInstance) {
-        contract = this.contractInstance
-      } else {
-        contract = await ethers.getContractAt(this.contractName, this.contractAddress)
-      }
-      const latestBlock = (await ethers.provider.getBlock(toBlock)).number
-      const eventFilter = contract.filters[eventName]()
-      const events = await contract.queryFilter(eventFilter, fromBlock, latestBlock)
+      const latestBlock = (await this.provider.getBlock(toBlock)).number
+      const eventFilter = this.contract.filters[eventName]()
+      const events = await this.contract.queryFilter(eventFilter, fromBlock, latestBlock)
       return {
         decodedEvents: events,
         blockNumber: latestBlock

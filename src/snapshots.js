@@ -1,6 +1,4 @@
-const { logger } = require("ethers")
 const { ImageEditor } = require("./imageEditor.js")
-const hre = require("hardhat");
 
 function _blockID(x, y) {
     return (y - 1) * 100 + x;
