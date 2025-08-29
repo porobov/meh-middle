@@ -98,8 +98,9 @@ async function syncEvents(eventName, contract, mapper, db, stopAtBlock = Number.
 async function mainLoop(db) {
     const chainName = db.chainName
     const chainId = networks[chainName].chainId
+    const contractAddress = config.contractAddress[chainId]
     let oldMehContract = new MillionEther(
-        config.contractAddress[chainId],
+        contractAddress,
         oldMehAbi.abi,
         chainName
     )
