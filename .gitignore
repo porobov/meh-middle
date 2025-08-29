@@ -7,3 +7,4 @@ logs/
 .DS_Store
 # *.png
 static/oldOwnershipMap.json
+/mongo_dumps
