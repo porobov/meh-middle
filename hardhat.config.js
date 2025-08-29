@@ -41,7 +41,7 @@ module.exports = {
     wrapperAddress: {
       // using fake wrapper for mainnet 
       "1": "0xb287dB1734b1BE9Fd681658d7dC3f2169bE9e45c",
-      "11155111": "0x40C82017a737f4aEe6850923ef2E2bc63af72D55",
+      "11155111": "0x42b4411cAA93736C1D30f4b833713Fa65aD4a90a",
     },
     // event names
     newImageEventName: "NewImage",  // 2016 contract
