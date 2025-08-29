@@ -1,2 +1,2 @@
 #!/bin/bash
-npx hardhat run index.js --network readMain
+node index.js --network mainnet

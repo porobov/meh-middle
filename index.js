@@ -5,7 +5,6 @@ const { mainLoop } = require("./src/mainLoop.js")
 const { networks } = require("./hardhat.config.js")
 const { dbConf } = require("./hardhat.config.js")
 
-
 // get chainName from network
 const args = process.argv.slice(2)
 const networkArg = args.find(arg => arg.startsWith('--network='))

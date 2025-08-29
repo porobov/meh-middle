@@ -14,7 +14,7 @@ module.exports = {
       url: "http://127.0.0.1:8545"
     },
     // read-only mainnet (for blocks import)
-    readMain: {
+    mainnet: {
       chainName: "mainnet",  // affects CF key name
       chainId: 1,
       url: process.env.ALCHEMY_MAINNET_URL !== undefined ? process.env.ALCHEMY_MAINNET_URL : "",

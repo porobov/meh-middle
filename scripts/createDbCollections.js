@@ -1,5 +1,3 @@
-// run like this
-// npx hardhat run scripts/createDbCollections.js --network readMain
 
 const { DB } = require("../src/db.js")
 const { dbConf } = require("../hardhat.config.js")

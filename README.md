@@ -7,11 +7,11 @@ See docker-compose.yaml example in root dir. Credentials in secrets (mongo for m
 
 **Create db if starting new**
 Will delete current DB
-`npx hardhat run scripts/createDbCollections.js --network readMain`
+`node scripts/createDbCollections.js --network mainnet`
 
 ## Run
 **Locally**
-`npx hardhat run index.js --network readMain`
+`node index.js --network mainnet`
 
 **Running on server with pm2**
 Increase kill-timeout to shutdown gracefully:
