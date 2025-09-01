@@ -82,14 +82,10 @@ function constructRetryParams(error, numOfTries) {
 // If stopAtBlock is provided, will stop at that block (needed for legacy
 // contracts)
 async function syncEvents(eventName, contract, mapper, db, stopAtBlock = Number.MAX_SAFE_INTEGER) {
-    let fromBlock = await db.getLatestBlockForEvent(eventName) + 1
+    const fromBlock = await db.getLatestBlockForEvent(eventName) + 1
     if ( fromBlock == null || fromBlock >= stopAtBlock ) { return null }
     // dealing with alchemy limit on number of blocks to query at once
-    let toQueryBlock = await contract.provider.getBlockNumber()
-    if (fromBlock > toQueryBlock) { return null }
-    if ( toQueryBlock - fromBlock >= config.maxBlocksRetrieved) {
-        toQueryBlock = fromBlock + config.maxBlocksRetrieved
-    }
+    const toQueryBlock = fromBlock + config.maxBlocksRetrieved
     const [formatedEvents, toBlock] = await getFormatedEvents(eventName, contract, mapper, fromBlock, toQueryBlock)
     if ( toBlock == null ) { return null } // do not save events if error occured
     await saveEventsToDB(toBlock, eventName, formatedEvents, db)

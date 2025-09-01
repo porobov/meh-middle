@@ -15,14 +15,23 @@ class MillionEther {
       )
   }
 
-  async getEvents(eventName, fromBlock, toBlock = "latest") {
+  async getEvents(eventName, fromBlock, toBlock) {
     try {
-      const latestBlock = (await this.provider.getBlock(toBlock)).number
+      // check fromBlock
+      const latestChainBlock = await this.provider.getBlockNumber()
+      if (fromBlock > latestChainBlock) {
+        return null
+      }
+      // check toBlock
+      let queryToBlock = latestChainBlock
+      if (latestChainBlock > toBlock) {
+        queryToBlock = toBlock
+      }
       const eventFilter = this.contract.filters[eventName]()
-      const events = await this.contract.queryFilter(eventFilter, fromBlock, latestBlock)
+      const events = await this.contract.queryFilter(eventFilter, fromBlock, queryToBlock)
       return {
         decodedEvents: events,
-        blockNumber: latestBlock
+        blockNumber: queryToBlock
       };
     } catch (err) {
       // skipping error code "-32000", which is:
