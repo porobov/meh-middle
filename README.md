@@ -7,7 +7,7 @@ See docker-compose.yaml example in root dir. Credentials in secrets (mongo for m
 
 **Create db if starting new**
 Will delete current DB
-`node scripts/createDbCollections.js --network mainnet`
+`node scripts/createDbCollections.js --network=mainnet`
 
 ## Run
 **Locally**
