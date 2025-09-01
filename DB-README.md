@@ -1,5 +1,13 @@
 # MongoDB Database Operations Guide
 
+## Manage db via ssh
+
+### 1. Create port forwarding
+ssh -L 8000:localhost:27018 <user>@<remote-server-IP>
+
+### 2. Use mogo eplorer 
+Use port 8000 locally
+
 ## Create Database Dump
 
 ### 1. Create Dump
