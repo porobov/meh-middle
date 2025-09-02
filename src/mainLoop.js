@@ -1,11 +1,7 @@
-const { MillionEther } = require("./chain.js")
 const { WebGateway } = require("./web.js")
 const { ImageEditor } = require("./imageEditor.js")
 const { AdsSnapshot, BuySellSnapshot } = require("./snapshots.js")
 const { logger } = require("./logger.js")
-const wrapperAbi = require('../contracts/wrapper_abi.js')
-const oldMehAbi = require('../contracts/oldMeh_abi.js')
-const meh2018Abi = require('../contracts/meh2018_abi.js')
 const { 
     mixedCoordinatesFilter,
     sellEventFilter,
@@ -91,27 +87,15 @@ async function syncEvents(eventName, contract, mapper, db, stopAtBlock = Number.
     await saveEventsToDB(toBlock, eventName, formatedEvents, db)
 }
 
-async function mainLoop(db) {
+async function mainLoop(db, chain) {
     const chainName = db.chainName
     const chainId = networks[chainName].chainId
     const contractAddress = config.contractAddress[chainId]
-    let oldMehContract = new MillionEther(
-        contractAddress,
-        oldMehAbi.abi,
-        chainName
-    )
-    let wrapperContract = new MillionEther(
-        config.wrapperAddress[chainId],
-        wrapperAbi.abi,
-        chainName
-    )
-    let meh2018 = new MillionEther(
-        config.meh2018AddressMain[chainId],
-        meh2018Abi.abi,
-        chainName
-    )
-    
+    const oldMehContract = chain.oldMehContract
+    const wrapperContract = chain.wrapperContract
+    const meh2018 = chain.meh2018
     const stopAtBlock = config.backgoundEventsBlockNumber[chainId]
+
     await syncEvents(config.transferEventName, meh2018, transfer2018mapper, db, stopAtBlock)
     await syncEvents(config.logAdsEventName, meh2018, logAds2018mapper, db, stopAtBlock)
 

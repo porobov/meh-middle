@@ -1,5 +1,6 @@
 require("dotenv").config();
 const { DB } = require("./src/db.js")
+const { Chain } = require("./src/chain.js")
 const { logger } = require("./src/logger.js")
 const { mainLoop } = require("./src/mainLoop.js")
 const { networks } = require("./hardhat.config.js")
@@ -29,6 +30,7 @@ const MAIN_LOOP_INTERVAL_MS = config.mainLoopIntervalMs
 const MODULE_NAME = 'index'
 
 let db = new DB(config, chainName)
+let chain = new Chain(config, chainName)
 
 let cancelNextCycle = false
 let isExecuting = false
@@ -59,8 +61,8 @@ async function main() {
         try {
             isExecuting = true
             logger.debug(`================= STARTING NEW CYCLE =================`)
-            if ( await db.connect() ) {
-                await mainLoop(db)
+            if ( await db.connect() && await chain.updateLatestChainBlock() ) {
+                await mainLoop(db, chain)
             }
         } catch (e) {
             throw e
