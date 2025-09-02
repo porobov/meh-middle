@@ -68,8 +68,17 @@ class Chain {
   }
 
   async updateLatestChainBlock() {
-    this.latestChainBlock = await this.provider.getBlockNumber()
-    return true
+    try {
+      const blockNumber = await this.provider.getBlockNumber()
+      if (typeof blockNumber !== 'number' || blockNumber < 0) {
+        throw new Error('Invalid block number received from provider')
+      }
+      this.latestChainBlock = blockNumber
+      return true
+    } catch (err) {
+      logger.error(err, { module: MODULE_NAME, action: 'updateLatestChainBlock' })
+      return false
+    }
   }
 }
 
