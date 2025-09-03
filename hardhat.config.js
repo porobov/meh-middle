@@ -49,7 +49,7 @@ module.exports = {
     logAdsEventName: "LogAds",  // 2018 contract
     logBuysEventName: "LogBuys",  // 2018 contract
     transferEventName: "Transfer",  // 2018 contract, wrapper contract
-    maxBlocksRetrieved: 499, // alchemy limit is 500 (using 499 to make block number better distinguishable)
+    maxBlocksRetrieved: 9, // alchemy free tier limit is 10
     // image downloader params
     imagesBatchSize: 100, // number of ads images downloaded within one cycle
     maxEventsPerSnapshot: 10,  // number of events retrieved per run per snapshot (small values used for testing)
