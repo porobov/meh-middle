@@ -60,7 +60,7 @@ module.exports = {
     statusCodesAllowingRetry: [408, 502, 503, 504, 429],  // downloader will try to download images again
     thumbnailParams: { width: 400, height: 400 },
     default_bg_path: "./static/bg.png", // path to bg image for pixelmap
-    mainLoopIntervalMs: 12000,  // actually a pause between cycles - making it equal to Ethereum block time (12 seconds)
+    mainLoopIntervalMs: 25000,  // actually a pause between cycles - making it equal to Ethereum block time (12 seconds)
     cfApiToken: process.env.CF_API_TOKEN !== undefined ? process.env.CF_API_TOKEN : "",
     cfNamespaceId: process.env.CF_NAMESPACE_ID !== undefined ? process.env.CF_NAMESPACE_ID : "",
     cfAccountID: process.env.CF_ACCOUNT_ID !== undefined ? process.env.CF_ACCOUNT_ID : "",
